@@ -6,416 +6,427 @@ import plotly.graph_objects as go
 import time
 
 # --- PAGE CONFIGURATION ---
-st.set_page_config(page_title="MathStudio Pro", page_icon="📐", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(
+    page_title="MathStudio Pro",
+    page_icon="📐",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# --- CUSTOM CSS ---
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=Source+Sans+3:wght@300;400;600&display=swap');
+# ─── WARM SANDY THEME ────────────────────────────────────────────────────────
+BG       = "#F0C294"   # RGB(0.94, 0.76, 0.58)  – main background
+CARD     = "#D9A97A"   # light brown – widget cards / boxes
+CARD2    = "#C8895A"   # medium brown – accent panels
+DARK     = "#6B3F1E"   # deep brown – text / headings
+LIGHT    = "#FBF0E4"   # cream white – inner contrast
+ACCENT   = "#A0522D"   # sienna – buttons / highlights
+SHADOW   = "rgba(107,63,30,0.18)"
 
-    /* ── Global background & base text ── */
-    html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
-        background-color: #F0C294 !important;
-        font-family: 'Source Sans 3', sans-serif;
-        color: #3b2712;
-    }
+st.markdown(f"""
+<style>
+/* ── Global background ─────────────────────────────────────── */
+.stApp, [data-testid="stAppViewContainer"] {{
+    background-color: {BG};
+    font-family: 'Georgia', serif;
+}}
 
-    [data-testid="stHeader"] { background: transparent !important; }
+/* ── Sidebar ────────────────────────────────────────────────── */
+[data-testid="stSidebar"] {{
+    background: linear-gradient(180deg, {CARD2} 0%, {DARK} 100%);
+}}
+[data-testid="stSidebar"] * {{
+    color: {LIGHT} !important;
+}}
+[data-testid="stSidebar"] .stRadio label {{
+    background: rgba(255,255,255,0.08);
+    border-radius: 8px;
+    padding: 6px 12px;
+    margin: 3px 0;
+    display: block;
+    transition: background 0.2s;
+}}
+[data-testid="stSidebar"] .stRadio label:hover {{
+    background: rgba(255,255,255,0.18);
+}}
 
-    /* ── Sidebar ── */
-    [data-testid="stSidebar"] {
-        background: #c8895a !important;
-        border-right: 3px solid #a0623a;
-    }
-    [data-testid="stSidebar"] * { color: #fff3e8 !important; }
-    [data-testid="stSidebar"] .stRadio label { font-family: 'Source Sans 3', sans-serif; font-weight: 600; }
+/* ── All input widgets → cream background ───────────────────── */
+.stTextInput input, .stNumberInput input,
+.stSelectbox > div > div,
+[data-testid="stDataEditor"] {{
+    background-color: {LIGHT} !important;
+    border: 1.5px solid {CARD2} !important;
+    border-radius: 8px !important;
+    color: {DARK} !important;
+}}
 
-    /* ── Page titles ── */
-    h1 {
-        font-family: 'Playfair Display', serif !important;
-        font-weight: 700;
-        color: #5c2f0e !important;
-        letter-spacing: -0.5px;
-        border-bottom: 3px solid #c8895a;
-        padding-bottom: 8px;
-    }
-    h2, h3 {
-        font-family: 'Playfair Display', serif !important;
-        color: #6b3a1f !important;
-    }
+/* ── Buttons ────────────────────────────────────────────────── */
+.stButton > button {{
+    background: linear-gradient(135deg, {ACCENT}, {DARK});
+    color: {LIGHT};
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+    font-size: 15px;
+    padding: 10px 20px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 14px {SHADOW};
+    transition: transform 0.2s, box-shadow 0.2s;
+    width: 100%;
+}}
+.stButton > button:hover {{
+    transform: translateY(-2px);
+    box-shadow: 0 7px 20px {SHADOW};
+}}
 
-    /* ── LIGHT BROWN BOXES (generic containers) ── */
-    .brown-box {
-        background: #dba97a;
-        border: 1.5px solid #b87040;
-        border-radius: 12px;
-        padding: 20px 24px;
-        margin-bottom: 16px;
-        box-shadow: 4px 4px 14px rgba(90,45,10,0.15);
-    }
+/* ── Cards / info boxes ─────────────────────────────────────── */
+.param-card {{
+    background: {CARD};
+    border-radius: 14px;
+    padding: 22px 20px;
+    box-shadow: 0 4px 18px {SHADOW};
+    margin-bottom: 18px;
+}}
+.result-banner {{
+    background: linear-gradient(120deg, {CARD2}, {ACCENT});
+    border-radius: 14px;
+    padding: 18px 24px;
+    color: {LIGHT};
+    margin-bottom: 16px;
+    box-shadow: 0 4px 18px {SHADOW};
+}}
+.module-header {{
+    background: linear-gradient(120deg, {DARK} 0%, {ACCENT} 100%);
+    border-radius: 16px;
+    padding: 28px 36px;
+    color: {LIGHT};
+    margin-bottom: 28px;
+    box-shadow: 0 6px 24px {SHADOW};
+}}
+.module-header h1 {{
+    margin: 0;
+    font-size: 2.1rem;
+    letter-spacing: 1px;
+}}
+.module-header p {{
+    margin: 6px 0 0;
+    font-size: 0.95rem;
+    opacity: 0.85;
+}}
+.section-title {{
+    color: {DARK};
+    font-size: 1.1rem;
+    font-weight: bold;
+    border-left: 4px solid {ACCENT};
+    padding-left: 10px;
+    margin-bottom: 12px;
+}}
+.metric-strip {{
+    background: {CARD};
+    border-radius: 12px;
+    padding: 16px;
+    text-align: center;
+    box-shadow: 0 2px 10px {SHADOW};
+}}
 
-    /* ── Metric cards (root finding) ── */
-    .metric-strip {
-        display: flex;
-        gap: 16px;
-        margin: 12px 0 20px 0;
-    }
-    .metric-tile {
-        flex: 1;
-        background: #c8895a;
-        border: 2px solid #a0623a;
-        border-radius: 10px;
-        padding: 14px 10px;
-        text-align: center;
-        box-shadow: 3px 3px 10px rgba(80,35,5,0.18);
-    }
-    .metric-tile .label {
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        color: #fff3e8;
-        margin-bottom: 4px;
-    }
-    .metric-tile .value {
-        font-family: 'Playfair Display', serif;
-        font-size: 22px;
-        font-weight: 700;
-        color: #fff8f0;
-    }
+/* ── Dataframe table headers ────────────────────────────────── */
+[data-testid="stDataFrame"] th {{
+    background-color: {CARD2} !important;
+    color: {LIGHT} !important;
+}}
 
-    /* ── Horizontal result strip (matrix) ── */
-    .result-banner {
-        background: linear-gradient(135deg, #c8895a, #dba97a);
-        border: 2px solid #a0623a;
-        border-radius: 14px;
-        padding: 18px 28px;
-        margin: 18px 0;
-        font-family: 'Playfair Display', serif;
-        font-size: 17px;
-        color: #fff3e8;
-        box-shadow: 4px 4px 16px rgba(80,35,5,0.2);
-    }
+/* ── Expander ───────────────────────────────────────────────── */
+[data-testid="stExpander"] {{
+    background: {CARD};
+    border-radius: 10px;
+    border: none !important;
+}}
 
-    /* ── Inputs, selects, number inputs ── */
-    .stTextInput input, .stNumberInput input, .stSelectbox select,
-    [data-testid="stNumberInput"] input {
-        background: #f5dfc4 !important;
-        border: 1.5px solid #b87040 !important;
-        border-radius: 8px !important;
-        color: #3b2712 !important;
-    }
+/* ── Divider ────────────────────────────────────────────────── */
+hr {{ border-color: {CARD2}; }}
 
-    /* ── Buttons ── */
-    .stButton > button {
-        background: #8b4513 !important;
-        color: #fff8f0 !important;
-        font-family: 'Source Sans 3', sans-serif !important;
-        font-weight: 700 !important;
-        font-size: 15px !important;
-        border: none !important;
-        border-radius: 10px !important;
-        padding: 10px 0 !important;
-        width: 100% !important;
-        letter-spacing: 0.5px;
-        box-shadow: 3px 3px 10px rgba(80,35,5,0.25);
-        transition: all 0.2s ease;
-    }
-    .stButton > button:hover {
-        background: #a0522d !important;
-        transform: translateY(-2px);
-        box-shadow: 4px 6px 14px rgba(80,35,5,0.3);
-    }
+/* ── Metric ─────────────────────────────────────────────────── */
+[data-testid="stMetricValue"] {{
+    color: {DARK} !important;
+    font-size: 1.5rem !important;
+}}
+[data-testid="stMetricLabel"] {{
+    color: {ACCENT} !important;
+}}
 
-    /* ── Divider ── */
-    hr { border-color: #b87040 !important; }
-
-    /* ── Dataframe ── */
-    [data-testid="stDataFrame"] {
-        border: 1.5px solid #b87040 !important;
-        border-radius: 8px;
-        overflow: hidden;
-    }
-
-    /* ── Expander ── */
-    .streamlit-expanderHeader {
-        background: #dba97a !important;
-        border-radius: 8px !important;
-        font-weight: 600;
-        color: #5c2f0e !important;
-    }
-
-    /* ── Info / toast boxes ── */
-    [data-testid="stAlert"] {
-        background: #dba97a !important;
-        border-left: 4px solid #8b4513 !important;
-        border-radius: 8px !important;
-        color: #3b2712 !important;
-    }
-
-    /* ── Spinner ── */
-    .stSpinner > div { border-top-color: #8b4513 !important; }
-
-    /* ── Section header pill ── */
-    .section-pill {
-        display: inline-block;
-        background: #8b4513;
-        color: #fff8f0;
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 1.5px;
-        text-transform: uppercase;
-        padding: 4px 14px;
-        border-radius: 20px;
-        margin-bottom: 12px;
-    }
-
-    /* ── Matrix column card ── */
-    .matrix-card {
-        background: #dba97a;
-        border: 1.5px solid #b87040;
-        border-radius: 14px;
-        padding: 18px;
-        box-shadow: 4px 4px 14px rgba(90,45,10,0.15);
-    }
-    </style>
+/* ── Spinner / success / error ──────────────────────────────── */
+.stAlert {{ border-radius: 10px; }}
+</style>
 """, unsafe_allow_html=True)
 
-# --- SIDEBAR ---
-st.sidebar.markdown("<h2 style='font-family:Playfair Display,serif; margin-bottom:4px;'>📐 MathStudio Pro</h2>", unsafe_allow_html=True)
+# ─── SIDEBAR ──────────────────────────────────────────────────────────────────
+st.sidebar.markdown("## 📐 MathStudio Pro")
 st.sidebar.markdown("---")
-app_mode = st.sidebar.radio("Select Module", ["Root Finding Analysis", "Advanced Matrix Operations"])
+app_mode = st.sidebar.radio(
+    "Choose Module",
+    ["Root Finding Analysis", "Advanced Matrix Operations"]
+)
 st.sidebar.markdown("---")
-st.sidebar.info("Developed with Streamlit & Python")
+st.sidebar.markdown(
+    f"<small style='color:#FBF0E4;opacity:0.7'>Powered by Streamlit & SymPy</small>",
+    unsafe_allow_html=True
+)
 
 
-# ══════════════════════════════════════════
-# MODULE 1: ROOT FINDING  — vertical-panel layout
-# Left: narrow settings panel | Right: wide results area
-# ══════════════════════════════════════════
+# ══════════════════════════════════════════════════════════════════════════════
+#  MODULE 1 – ROOT FINDING
+#  NEW LAYOUT: full-width banner header → horizontal param strip (3 cols) →
+#              method-specific inputs row → full-width graph + metrics →
+#              collapsible iteration table
+# ══════════════════════════════════════════════════════════════════════════════
 if app_mode == "Root Finding Analysis":
-    st.title("Root Finding Analysis")
-    st.markdown("Analyze equations and find roots using classical numerical methods.")
 
-    # Two-column split: settings (narrow) | results (wide)
-    col_input, col_results = st.columns([1, 2.5])
+    st.markdown("""
+    <div class="module-header">
+        <h1>🔍 Root Finding Analysis</h1>
+        <p>Solve equations numerically using classical algorithms — visualized step by step.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-    with col_input:
-        st.markdown('<div class="brown-box">', unsafe_allow_html=True)
-        st.markdown('<span class="section-pill">⚙ Parameters</span>', unsafe_allow_html=True)
+    # ── Top param strip ────────────────────────────────────────────────────────
+    st.markdown('<div class="section-title">⚙️ Configuration</div>', unsafe_allow_html=True)
 
-        eq_str = st.text_input("Equation f(x)", value="x**3 - x - 2")
+    top1, top2, top3, top4 = st.columns([2, 1.5, 1, 1])
+    with top1:
+        eq_str = st.text_input("Equation  f(x)", value="x**3 - x - 2",
+                               help="Use Python syntax, e.g. x**2 - 4*x + 3")
+    with top2:
         method = st.selectbox("Algorithm", [
-            "Incremental Search", "Bisection Method",
-            "Regula-Falsi", "Newton-Raphson", "Secant Method"
+            "Bisection Method", "Regula-Falsi", "Newton-Raphson",
+            "Secant Method", "Incremental Search"
         ])
-
-        if method in ["Bisection Method", "Regula-Falsi", "Incremental Search"]:
-            xl = st.number_input("Lower Bound (xl)", value=1.0)
-            xu = st.number_input("Upper Bound (xu)", value=2.0)
-        elif method == "Newton-Raphson":
-            x0 = st.number_input("Initial Guess (x0)", value=1.0)
-        elif method == "Secant Method":
-            x0 = st.number_input("First Guess (x0)", value=1.0)
-            x1 = st.number_input("Second Guess (x1)", value=2.0)
-
-        tol      = st.number_input("Tolerance", value=0.0001, format="%.5f")
+    with top3:
+        tol     = st.number_input("Tolerance", value=0.0001, format="%.5f")
+    with top4:
         max_iter = st.number_input("Max Iterations", value=50, step=1)
 
-        st.markdown("</div>", unsafe_allow_html=True)
-        solve_btn = st.button("Calculate Root")
+    # ── Method-specific inputs in a card ──────────────────────────────────────
+    st.markdown('<div class="section-title">📥 Method Inputs</div>', unsafe_allow_html=True)
 
-    with col_results:
-        if solve_btn:
-            try:
-                x    = sp.Symbol('x')
-                expr = sp.sympify(eq_str)
-                f    = sp.lambdify(x, expr, 'numpy')
-                df   = sp.lambdify(x, sp.diff(expr, x), 'numpy')
+    with st.container():
+        mi1, mi2, mi3 = st.columns([1, 1, 2])
 
-                results, root, iterations, final_err = [], None, 0, 0
+        if method in ["Bisection Method", "Regula-Falsi", "Incremental Search"]:
+            with mi1:
+                xl = st.number_input("Lower Bound  (xl)", value=1.0)
+            with mi2:
+                xu = st.number_input("Upper Bound  (xu)", value=2.0)
+        elif method == "Newton-Raphson":
+            with mi1:
+                x0 = st.number_input("Initial Guess  (x0)", value=1.0)
+        elif method == "Secant Method":
+            with mi1:
+                x0 = st.number_input("First Guess  (x0)", value=1.0)
+            with mi2:
+                x1 = st.number_input("Second Guess  (x1)", value=2.0)
 
-                if method == "Bisection Method":
-                    for i in range(int(max_iter)):
-                        xr  = (xl + xu) / 2
-                        err = abs(xu - xl) / 2
-                        results.append({"Iter": i+1, "xl": xl, "xu": xu, "xr": xr, "f(xr)": f(xr), "Error": err})
-                        if f(xr) == 0 or err < tol:
-                            root, iterations, final_err = xr, i+1, err; break
-                        if f(xl) * f(xr) < 0: xu = xr
-                        else: xl = xr
+        with mi3:
+            st.markdown("<br>", unsafe_allow_html=True)
+            solve_btn = st.button("▶  Calculate Root")
 
-                elif method == "Regula-Falsi":
-                    for i in range(int(max_iter)):
-                        xr  = xu - (f(xu)*(xl - xu)) / (f(xl) - f(xu))
-                        err = abs(f(xr))
-                        results.append({"Iter": i+1, "xl": xl, "xu": xu, "xr": xr, "f(xr)": f(xr), "Error": err})
-                        if err < tol:
-                            root, iterations, final_err = xr, i+1, err; break
-                        if f(xl) * f(xr) < 0: xu = xr
-                        else: xl = xr
+    st.markdown("---")
 
-                elif method == "Newton-Raphson":
-                    xr = x0
-                    for i in range(int(max_iter)):
-                        fxr, dfxr = f(xr), df(xr)
-                        xr_new    = xr - fxr/dfxr
-                        err       = abs(xr_new - xr)
-                        results.append({"Iter": i+1, "xi": xr, "f(xi)": fxr, "f'(xi)": dfxr, "xi+1": xr_new, "Error": err})
-                        xr = xr_new
-                        if err < tol:
-                            root, iterations, final_err = xr, i+1, err; break
-
-                elif method == "Secant Method":
-                    for i in range(int(max_iter)):
-                        fx1, fx0 = f(x1), f(x0)
-                        x2  = x1 - (fx1 * (x0 - x1)) / (fx0 - fx1)
-                        err = abs(x2 - x1)
-                        results.append({"Iter": i+1, "x(i-1)": x0, "x(i)": x1, "x(i+1)": x2, "f(x(i+1))": f(x2), "Error": err})
-                        x0, x1 = x1, x2
-                        if err < tol:
-                            root, iterations, final_err = x2, i+1, err; break
-
-                elif method == "Incremental Search":
-                    step, curr_x = 0.1, xl
-                    for i in range(int(max_iter)):
-                        next_x = curr_x + step
-                        results.append({"Iter": i+1, "x": curr_x, "f(x)": f(curr_x)})
-                        if f(curr_x) * f(next_x) < 0:
-                            root, iterations = (curr_x + next_x)/2, i+2; break
-                        curr_x = next_x
-
-                if root is not None:
-                    st.toast('Calculation Complete!', icon='✅')
-
-                    # ── Three horizontal metric tiles ──
-                    st.markdown(f"""
-                        <div class="metric-strip">
-                            <div class="metric-tile">
-                                <div class="label">Calculated Root</div>
-                                <div class="value">{root:.6f}</div>
-                            </div>
-                            <div class="metric-tile">
-                                <div class="label">Total Iterations</div>
-                                <div class="value">{iterations}</div>
-                            </div>
-                            <div class="metric-tile">
-                                <div class="label">Final Error</div>
-                                <div class="value">{f"{final_err:.6f}" if final_err else "N/A"}</div>
-                            </div>
-                        </div>
-                    """, unsafe_allow_html=True)
-
-                    # ── Plotly graph inside a brown box ──
-                    st.markdown('<div class="brown-box">', unsafe_allow_html=True)
-                    st.markdown('<span class="section-pill">📈 Interactive Graph</span>', unsafe_allow_html=True)
-
-                    x_vals = np.linspace(root - 3, root + 3, 300)
-                    y_vals = f(x_vals)
-
-                    fig = go.Figure()
-                    fig.add_trace(go.Scatter(
-                        x=x_vals, y=y_vals, mode='lines', name='f(x)',
-                        line=dict(color='#8b4513', width=3)
-                    ))
-                    fig.add_hline(y=0, line_dash="dash", line_color="#5c2f0e", line_width=1)
-                    fig.add_vline(x=0, line_dash="dash", line_color="#5c2f0e", line_width=1)
-                    fig.add_trace(go.Scatter(
-                        x=[root], y=[0], mode='markers', name='Root',
-                        marker=dict(color='#c0392b', size=14, symbol='x-thin', line=dict(width=3, color='#c0392b'))
-                    ))
-                    fig.update_layout(
-                        plot_bgcolor='#f5dfc4',
-                        paper_bgcolor='rgba(0,0,0,0)',
-                        font=dict(color='#3b2712'),
-                        xaxis=dict(gridcolor='#c8a07a', zerolinecolor='#8b6040'),
-                        yaxis=dict(gridcolor='#c8a07a', zerolinecolor='#8b6040'),
-                        legend=dict(bgcolor='#dba97a', bordercolor='#b87040', borderwidth=1),
-                        margin=dict(l=0, r=0, t=20, b=0),
-                        hovermode="x unified"
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
-                    st.markdown("</div>", unsafe_allow_html=True)
-
-                    # ── Expandable iteration table ──
-                    with st.expander("📊 View Detailed Iteration History"):
-                        st.dataframe(pd.DataFrame(results), use_container_width=True)
-
-            except Exception as e:
-                st.error(f"Error: {e}")
-
-
-# ══════════════════════════════════════════
-# MODULE 2: MATRIX OPS  — card-stack layout
-# Full-width operation selector → stacked matrix cards (centered, side-by-side) → result banner
-# ══════════════════════════════════════════
-elif app_mode == "Advanced Matrix Operations":
-    st.title("Advanced Matrix Operations")
-    st.markdown("Select an operation, fill in the matrix cells, then execute.")
-
-    # ── Full-width operation chooser ──
-    st.markdown('<div class="brown-box">', unsafe_allow_html=True)
-    st.markdown('<span class="section-pill">🔢 Operation</span>', unsafe_allow_html=True)
-    op = st.selectbox("", [
-        "Addition", "Multiplication", "System of Equations (Ax = B)",
-        "Adjoint", "Inverse", "Determinant", "Power of Matrix", "Transpose"
-    ], label_visibility="collapsed")
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    needs_B = op in ["Addition", "Multiplication", "System of Equations (Ax = B)"]
-
-    # ── Matrix input cards ──
-    if needs_B:
-        col1, col2 = st.columns(2, gap="large")
-    else:
-        col1, _ = st.columns([1, 1])
-
-    with col1:
-        st.markdown('<div class="brown-box">', unsafe_allow_html=True)
-        st.markdown('<span class="section-pill">Matrix A</span>', unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        rows_A = c1.number_input("Rows A", 1, 10, 3)
-        cols_A = c2.number_input("Cols A", 1, 10, 3)
-        df_A     = pd.DataFrame(np.zeros((rows_A, cols_A)), columns=[f"C{i+1}" for i in range(cols_A)])
-        edited_A = st.data_editor(df_A, use_container_width=True, key="matrix_a")
-        A        = edited_A.to_numpy()
-
-        if op == "Power of Matrix":
-            st.markdown("---")
-            st.markdown('<span class="section-pill">⚙ Settings</span>', unsafe_allow_html=True)
-            power = st.number_input("Exponent (n)", value=2, step=1)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    if needs_B:
-        with col2:
-            st.markdown('<div class="brown-box">', unsafe_allow_html=True)
-            st.markdown('<span class="section-pill">Matrix B</span>', unsafe_allow_html=True)
-
-            if op == "System of Equations (Ax = B)":
-                st.info("B must be a single-column vector (same rows as A).")
-                rows_B, cols_B = rows_A, 1
-            elif op == "Addition":
-                rows_B, cols_B = rows_A, cols_A
-            else:
-                c1, c2 = st.columns(2)
-                rows_B = c1.number_input("Rows B", 1, 10, int(cols_A), disabled=True)
-                cols_B = c2.number_input("Cols B", 1, 10, 3)
-
-            df_B     = pd.DataFrame(np.zeros((rows_B, cols_B)), columns=[f"C{i+1}" for i in range(cols_B)])
-            edited_B = st.data_editor(df_B, use_container_width=True, key="matrix_b")
-            B        = edited_B.to_numpy()
-            st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # ── Execute button (full width) ──
-    if st.button("▶  Execute Matrix Operation", use_container_width=True):
+    # ── Results ────────────────────────────────────────────────────────────────
+    if solve_btn:
         try:
-            with st.spinner("Calculating…"):
+            x_sym = sp.Symbol('x')
+            expr  = sp.sympify(eq_str)
+            f     = sp.lambdify(x_sym, expr, 'numpy')
+            df_fn = sp.lambdify(x_sym, sp.diff(expr, x_sym), 'numpy')
+
+            results, root, iterations, final_err = [], None, 0, 0
+
+            if method == "Bisection Method":
+                for i in range(max_iter):
+                    xr  = (xl + xu) / 2
+                    err = abs(xu - xl) / 2
+                    results.append({"Iter": i+1, "xl": xl, "xu": xu, "xr": xr, "f(xr)": f(xr), "Error": err})
+                    if f(xr) == 0 or err < tol:
+                        root, iterations, final_err = xr, i+1, err; break
+                    if f(xl) * f(xr) < 0: xu = xr
+                    else: xl = xr
+
+            elif method == "Regula-Falsi":
+                for i in range(max_iter):
+                    xr  = xu - (f(xu)*(xl - xu)) / (f(xl) - f(xu))
+                    err = abs(f(xr))
+                    results.append({"Iter": i+1, "xl": xl, "xu": xu, "xr": xr, "f(xr)": f(xr), "Error": err})
+                    if err < tol:
+                        root, iterations, final_err = xr, i+1, err; break
+                    if f(xl) * f(xr) < 0: xu = xr
+                    else: xl = xr
+
+            elif method == "Newton-Raphson":
+                xr = x0
+                for i in range(max_iter):
+                    fxr, dfxr = f(xr), df_fn(xr)
+                    xr_new    = xr - fxr/dfxr
+                    err       = abs(xr_new - xr)
+                    results.append({"Iter": i+1, "xi": xr, "f(xi)": fxr, "f'(xi)": dfxr, "xi+1": xr_new, "Error": err})
+                    xr = xr_new
+                    if err < tol:
+                        root, iterations, final_err = xr, i+1, err; break
+
+            elif method == "Secant Method":
+                for i in range(max_iter):
+                    fx1, fx0 = f(x1), f(x0)
+                    x2       = x1 - (fx1*(x0 - x1)) / (fx0 - fx1)
+                    err      = abs(x2 - x1)
+                    results.append({"Iter": i+1, "x(i-1)": x0, "x(i)": x1, "x(i+1)": x2, "f(x(i+1))": f(x2), "Error": err})
+                    x0, x1 = x1, x2
+                    if err < tol:
+                        root, iterations, final_err = x2, i+1, err; break
+
+            elif method == "Incremental Search":
+                step, curr_x = 0.1, xl
+                for i in range(max_iter):
+                    next_x = curr_x + step
+                    results.append({"Iter": i+1, "x": curr_x, "f(x)": f(curr_x)})
+                    if f(curr_x) * f(next_x) < 0:
+                        root, iterations = (curr_x + next_x)/2, i+2; break
+                    curr_x = next_x
+
+            if root is not None:
+                st.toast("Calculation complete!", icon="✅")
+
+                # ── Metrics row ──────────────────────────────────────────────
+                mc1, mc2, mc3, mc4 = st.columns(4)
+                mc1.metric("Calculated Root",  f"{root:.6f}")
+                mc2.metric("Total Iterations", iterations)
+                mc3.metric("Final Error",       f"{final_err:.2e}" if final_err else "N/A")
+                mc4.metric("Method Used",       method.split()[0])
+
+                st.markdown("<br>", unsafe_allow_html=True)
+
+                # ── Graph (full width) ───────────────────────────────────────
+                x_vals = np.linspace(root - 3, root + 3, 400)
+                y_vals = f(x_vals)
+
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(
+                    x=x_vals, y=y_vals, mode='lines', name='f(x)',
+                    line=dict(color='#6B3F1E', width=2.5)
+                ))
+                fig.add_hline(y=0, line_dash="dot", line_color="#A0522D")
+                fig.add_vline(x=0, line_dash="dot", line_color="#A0522D")
+                fig.add_trace(go.Scatter(
+                    x=[root], y=[0], mode='markers', name='Root',
+                    marker=dict(color='#C8895A', size=14, symbol='star',
+                                line=dict(color='#6B3F1E', width=2))
+                ))
+                fig.update_layout(
+                    title=dict(text=f"f(x) = {eq_str}  |  Root ≈ {root:.6f}",
+                               font=dict(color="#6B3F1E", size=15)),
+                    paper_bgcolor="rgba(251,240,228,0.7)",
+                    plot_bgcolor="rgba(251,240,228,0.7)",
+                    xaxis=dict(gridcolor="#D9A97A", title="x"),
+                    yaxis=dict(gridcolor="#D9A97A", title="f(x)"),
+                    legend=dict(bgcolor="rgba(240,194,148,0.6)"),
+                    hovermode="x unified",
+                    margin=dict(l=20, r=20, t=50, b=20)
+                )
+                st.plotly_chart(fig, use_container_width=True)
+
+                # ── Iteration table (collapsible) ────────────────────────────
+                with st.expander("📊 Full Iteration History"):
+                    st.dataframe(pd.DataFrame(results), use_container_width=True)
+
+        except Exception as e:
+            st.error(f"⚠️ Could not evaluate equation. Use Python syntax (e.g. x**2). Details: {e}")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  MODULE 2 – MATRIX OPERATIONS
+#  NEW LAYOUT: centered operation selector → tabbed single/dual matrix input →
+#              wide result panel below, no side-by-side clutter
+# ══════════════════════════════════════════════════════════════════════════════
+elif app_mode == "Advanced Matrix Operations":
+
+    st.markdown("""
+    <div class="module-header">
+        <h1>🔢 Advanced Matrix Operations</h1>
+        <p>Enter matrices in the interactive grids below, choose an operation and execute.</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # ── Operation selector (full width, prominent) ─────────────────────────────
+    op_col, _ = st.columns([2, 1])
+    with op_col:
+        op = st.selectbox(
+            "🧮  Select Operation",
+            ["Addition", "Multiplication", "System of Equations (Ax = B)",
+             "Adjoint", "Inverse", "Determinant", "Power of Matrix", "Transpose"]
+        )
+
+    st.markdown("---")
+
+    # ─── Determine if we need one or two matrices ─────────────────────────────
+    needs_two = op in ["Addition", "Multiplication", "System of Equations (Ax = B)"]
+
+    # ── Matrix A block ─────────────────────────────────────────────────────────
+    st.markdown('<div class="section-title">📋 Matrix A</div>', unsafe_allow_html=True)
+
+    size_row = st.columns([1, 1, 4])
+    with size_row[0]:
+        rows_A = st.number_input("Rows (A)", 1, 10, 3, key="rA")
+    with size_row[1]:
+        cols_A = st.number_input("Cols (A)", 1, 10, 3, key="cA")
+
+    df_A    = pd.DataFrame(np.zeros((rows_A, cols_A)),
+                           columns=[f"c{i+1}" for i in range(cols_A)])
+    edited_A = st.data_editor(df_A, use_container_width=True, key="matrix_a")
+    A        = edited_A.to_numpy()
+
+    # ── Matrix B block (conditional) ──────────────────────────────────────────
+    if needs_two:
+        st.markdown("---")
+        st.markdown('<div class="section-title">📋 Matrix B</div>', unsafe_allow_html=True)
+
+        if op == "System of Equations (Ax = B)":
+            st.info("Vector B must be a single column (n × 1).", icon="ℹ️")
+            rows_B, cols_B = rows_A, 1
+        elif op == "Addition":
+            rows_B, cols_B = rows_A, cols_A
+            st.caption(f"Size locked to match A: {rows_A} × {cols_A}")
+        else:  # Multiplication
+            b_size = st.columns([1, 1, 4])
+            with b_size[0]:
+                rows_B = st.number_input("Rows (B)", 1, 10, cols_A,
+                                         disabled=True, key="rB")
+            with b_size[1]:
+                cols_B = st.number_input("Cols (B)", 1, 10, 3, key="cB")
+
+        df_B     = pd.DataFrame(np.zeros((rows_B, cols_B)),
+                                columns=[f"c{i+1}" for i in range(cols_B)])
+        edited_B = st.data_editor(df_B, use_container_width=True, key="matrix_b")
+        B        = edited_B.to_numpy()
+
+    # ── Power setting ──────────────────────────────────────────────────────────
+    if op == "Power of Matrix":
+        st.markdown("---")
+        pw_col, _ = st.columns([1, 3])
+        with pw_col:
+            power = st.number_input("Exponent  n  (Aⁿ)", value=2, step=1)
+
+    # ── Execute button ─────────────────────────────────────────────────────────
+    st.markdown("<br>", unsafe_allow_html=True)
+    _, btn_col, _ = st.columns([1, 2, 1])
+    with btn_col:
+        run_btn = st.button("⚡  Execute Matrix Operation")
+
+    st.markdown("---")
+
+    # ── Computation & output ────────────────────────────────────────────────────
+    if run_btn:
+        try:
+            with st.spinner("Computing…"):
                 time.sleep(0.4)
 
-            # ── Result banner header ──
-            st.markdown(f'<div class="result-banner">✔ Operation: <b>{op}</b> — Result below</div>', unsafe_allow_html=True)
+            result = None
 
             if op == "Addition":
                 result = A + B
@@ -424,33 +435,38 @@ elif app_mode == "Advanced Matrix Operations":
             elif op == "Transpose":
                 result = A.T
             elif op == "Determinant":
-                det = np.linalg.det(A)
-                st.markdown(f"""
-                    <div class="metric-strip">
-                        <div class="metric-tile" style="max-width:280px;">
-                            <div class="label">Determinant Value</div>
-                            <div class="value">{det:.4f}</div>
-                        </div>
-                    </div>
-                """, unsafe_allow_html=True)
+                det_val = np.linalg.det(A)
+                st.markdown('<div class="section-title">📤 Result</div>',
+                            unsafe_allow_html=True)
+                _, d_col, _ = st.columns([1, 1, 1])
+                with d_col:
+                    st.metric("Determinant of A", f"{det_val:.6f}")
                 result = None
             elif op == "Inverse":
                 result = np.linalg.inv(A)
             elif op == "Adjoint":
-                result = np.round(np.linalg.inv(A) * np.linalg.det(A), 4)
+                result = np.round(np.linalg.inv(A) * np.linalg.det(A), 6)
             elif op == "Power of Matrix":
                 result = np.linalg.matrix_power(A, int(power))
             elif op == "System of Equations (Ax = B)":
                 result = np.linalg.solve(A, B)
-                st.success("Solutions for Vector X:")
+                st.success("✅ Solution vector  X  found!", icon="✅")
 
             if result is not None:
-                st.markdown('<div class="brown-box">', unsafe_allow_html=True)
-                st.dataframe(pd.DataFrame(result), use_container_width=True)
-                st.markdown("</div>", unsafe_allow_html=True)
-                st.toast('Operation Successful!', icon='✅')
+                st.markdown('<div class="section-title">📤 Resulting Matrix</div>',
+                            unsafe_allow_html=True)
+
+                # Label columns nicely
+                if result.ndim == 1:
+                    res_df = pd.DataFrame(result, columns=["Value"])
+                else:
+                    res_df = pd.DataFrame(result,
+                                          columns=[f"Col {i+1}" for i in range(result.shape[1])],
+                                          index=[f"Row {i+1}" for i in range(result.shape[0])])
+                st.dataframe(res_df, use_container_width=True)
+                st.toast("Operation successful!", icon="✅")
 
         except np.linalg.LinAlgError as e:
-            st.error(f"Math Error: {e}")
+            st.error(f"⚠️ Mathematical Error: {e}  (Matrix may be singular or non-invertible.)")
         except ValueError as e:
-            st.error(f"Dimension Error: {e}")
+            st.error(f"⚠️ Dimension Mismatch: {e}")
