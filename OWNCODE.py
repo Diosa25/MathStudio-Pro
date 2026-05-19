@@ -427,7 +427,6 @@ hr {
 with st.sidebar:
     st.markdown("""
         <div style="padding-top:0.4rem;">
-            <div class="sidebar-name">DIOSAMABEL B. PENASO · BSCOMPE-2</div>
             <div class="sidebar-hdr">✦ CALCULATION HISTORY ✦</div>
         </div>
     """, unsafe_allow_html=True)
