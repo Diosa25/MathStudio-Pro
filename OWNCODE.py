@@ -748,34 +748,46 @@ elif app_mode == "Advanced Matrix Operations":
                 with st.spinner("Processing..."):
                     time.sleep(0.35)
 
-                result     = None
-                ans_str    = ""
+                result  = None
+                det_val = None          # always initialise to avoid NameError
+                ans_str = ""
+
                 if op == "Addition":
-                    result  = A + B;  ans_str = "Matrix addition complete."
+                    result  = A + B
+                    ans_str = "Matrix addition complete."
                 elif op == "Multiplication":
-                    result  = np.matmul(A, B);  ans_str = "Matrix product computed."
+                    result  = np.matmul(A, B)
+                    ans_str = "Matrix product computed."
                 elif op == "Transpose":
-                    result  = A.T;  ans_str = "Matrix transposed."
+                    result  = A.T
+                    ans_str = "Matrix transposed."
                 elif op == "Determinant":
-                    det_val = np.linalg.det(A);  ans_str = f"det(A) = {det_val:.6f}"
+                    det_val = np.linalg.det(A)
+                    ans_str = f"det(A) = {det_val:.6f}"
+                    # result stays None — displayed via st.metric, not dataframe
                 elif op == "Inverse":
-                    result  = np.linalg.inv(A);  ans_str = "Inverse computed."
+                    result  = np.linalg.inv(A)
+                    ans_str = "Inverse computed."
                 elif op == "Adjoint":
-                    result  = np.round(np.linalg.inv(A) * np.linalg.det(A), 6)
+                    result  = np.round(np.linalg.inv(A) * np.linalg.det(A), 4)
                     ans_str = "Adjoint computed."
                 elif op == "Power of Matrix":
                     result  = np.linalg.matrix_power(A, int(power))
                     ans_str = f"A^{int(power)} computed."
                 elif op == "System of Equations (Ax = B)":
-                    result  = np.linalg.solve(A, B);  ans_str = "System solved for X."
+                    result  = np.linalg.solve(A, B)
+                    ans_str = "System solved for X."
 
-                # Persist
-                st.session_state.mx_result = {"op": op, "result": result,
-                                               "det_val": det_val if op == "Determinant" else None,
-                                               "ans_str": ans_str}
+                # Persist to session state
+                st.session_state.mx_result = {
+                    "op":      op,
+                    "result":  result,
+                    "det_val": det_val,
+                    "ans_str": ans_str,
+                }
                 st.session_state.mx_op = op
 
-                # History
+                # Save to history
                 st.session_state.history.append({
                     "type":      "Matrix Operation",
                     "method":    op,
@@ -797,16 +809,27 @@ elif app_mode == "Advanced Matrix Operations":
             st.markdown(f'<div class="panel-title">⊞ Result — {r["op"]}</div>', unsafe_allow_html=True)
 
             if r["op"] == "Determinant":
+                # Determinant: single scalar metric card
                 st.metric("Determinant Value", f'{r["det_val"]:.6f}')
+
+            elif r["op"] == "System of Equations (Ax = B)":
+                st.success("✦  Solutions found for Vector X:")
+                if r["result"] is not None:
+                    st.dataframe(
+                        pd.DataFrame(r["result"], columns=["X (solution)"]).style.format("{:.6g}"),
+                        use_container_width=True,
+                        height=420,
+                    )
+
             else:
-                if r["op"] == "System of Equations (Ax = B)":
-                    st.success("✦  Solutions found for Vector X:")
+                # All other ops: display result matrix as dataframe
                 if r["result"] is not None:
                     st.dataframe(
                         pd.DataFrame(r["result"]).style.format("{:.6g}"),
                         use_container_width=True,
                         height=420,
                     )
+
             st.markdown('</div>', unsafe_allow_html=True)
         else:
             st.markdown("""
