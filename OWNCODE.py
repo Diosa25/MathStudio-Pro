@@ -6,821 +6,815 @@ import plotly.graph_objects as go
 import time
 from datetime import datetime
 
-# --- PAGE CONFIGURATION ---
+# ══════════════════════════════════════════════════════════════════════════════
+#  PAGE CONFIG
+# ══════════════════════════════════════════════════════════════════════════════
 st.set_page_config(
-    page_title="Numerical Project — Penaso",
+    page_title="Numerical Project",
     page_icon="📐",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
-# ─────────────────────────────────────────────
-#  GLOBAL CSS — Vintage Brown Academic Theme
-# ─────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+#  SESSION STATE INIT
+# ══════════════════════════════════════════════════════════════════════════════
+for key, val in {
+    "rf_results":    [],
+    "rf_root":       None,
+    "rf_iterations": 0,
+    "rf_error":      0,
+    "rf_fig":        None,
+    "rf_eq":         "",
+    "rf_method":     "",
+    "mx_result":     None,
+    "mx_op":         "",
+    "history":       [],
+}.items():
+    if key not in st.session_state:
+        st.session_state[key] = val
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  MASTER CSS — VINTAGE BROWN ACADEMIC DASHBOARD
+# ══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Lato:wght@300;400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&display=swap');
 
-/* ── Root palette ── */
+/* ─── TOKENS ─────────────────────────────────────────────────────────────── */
 :root {
-    --cream:        #F5F0E8;
-    --parchment:    #EDE5D0;
-    --warm-beige:   #D9C9A8;
-    --tan:          #C4A882;
-    --coffee:       #7B5C3E;
-    --espresso:     #4A3728;
-    --dark-wood:    #2C1F14;
-    --ink:          #1A1208;
-    --accent-gold:  #C9A84C;
-    --accent-rust:  #8B4A2A;
-    --white-smoke:  #FAF7F2;
-    --shadow:       rgba(44,31,20,0.18);
-    --shadow-deep:  rgba(44,31,20,0.32);
+    --bg:         #F0E6D0;
+    --bg2:        #E8D9BF;
+    --cream:      #FBF4E6;
+    --cream2:     #F6EDD8;
+    --border:     #C8A97A;
+    --border2:    #B8936A;
+    --brown-dk:   #2C1A0E;
+    --brown-md:   #5C3317;
+    --brown-lt:   #8B5E3C;
+    --tan:        #C4A882;
+    --tan-lt:     #DFC9A8;
+    --gold:       #D4A96A;
+    --gold-lt:    #E8C98A;
+    --shadow:     rgba(44,26,14,0.18);
+    --shadow-dk:  rgba(44,26,14,0.35);
 }
 
-/* ── Global reset ── */
-html, body, [class*="css"] {
-    font-family: 'EB Garamond', Georgia, serif;
-    background-color: var(--parchment) !important;
-    color: var(--ink) !important;
+/* ─── GLOBAL ─────────────────────────────────────────────────────────────── */
+html, body, [class*="css"], .stApp {
+    font-family: 'Crimson Text', Georgia, serif;
+    background-color: var(--bg);
+    color: var(--brown-dk);
 }
-
-/* ── Paper texture overlay ── */
-.stApp {
-    background-color: var(--parchment) !important;
-    background-image:
-        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+.main .block-container {
+    padding: 0.6rem 1.8rem 2rem 1.8rem;
+    max-width: 100%;
 }
+#MainMenu, footer { visibility: hidden; }
+::-webkit-scrollbar            { width: 6px; height: 6px; }
+::-webkit-scrollbar-track      { background: var(--bg2); }
+::-webkit-scrollbar-thumb      { background: var(--brown-lt); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover{ background: var(--brown-md); }
 
-/* ── Hide default Streamlit chrome ── */
-#MainMenu, footer, header { visibility: hidden; }
-.block-container { padding-top: 0 !important; max-width: 100% !important; }
-
-/* ── Masthead ── */
-.masthead {
-    background: linear-gradient(135deg, var(--dark-wood) 0%, var(--espresso) 60%, var(--coffee) 100%);
-    padding: 18px 40px 14px 40px;
+/* ─── HEADER ──────────────────────────────────────────────────────────────── */
+.vhdr {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 3px solid var(--accent-gold);
-    box-shadow: 0 4px 20px var(--shadow-deep);
-    margin-bottom: 0;
+    padding: 1rem 2rem 0.9rem 2rem;
+    background: linear-gradient(120deg, #1E0F06 0%, #3B2210 30%, #5C3317 60%, #3B2210 85%, #1E0F06 100%);
+    border-radius: 14px;
+    margin-bottom: 0.2rem;
+    box-shadow: 0 6px 28px var(--shadow-dk), inset 0 1px 0 rgba(212,169,106,0.25);
+    border: 1px solid #6A3E20;
+    position: relative;
+    overflow: hidden;
 }
-.masthead-left {
-    font-family: 'Lato', sans-serif;
-    font-size: 0.78rem;
-    font-weight: 300;
-    color: var(--warm-beige);
-    letter-spacing: 0.08em;
-    line-height: 1.6;
+.vhdr::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(60deg, transparent, transparent 18px,
+        rgba(212,169,106,0.04) 18px, rgba(212,169,106,0.04) 36px);
+    pointer-events: none;
 }
-.masthead-left span {
-    display: block;
-    font-weight: 700;
-    font-size: 0.85rem;
-    color: var(--cream);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+.vhdr-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.88rem;
+    color: var(--gold);
+    letter-spacing: 0.07em;
+    line-height: 1.55;
+    font-style: italic;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    min-width: 185px;
 }
-.masthead-center {
-    text-align: center;
-    flex: 1;
-}
-.masthead-center h1 {
+.vhdr-title {
     font-family: 'Playfair Display', serif;
     font-size: 1.95rem;
     font-weight: 700;
-    color: var(--cream);
-    margin: 0;
-    letter-spacing: 0.06em;
-    text-shadow: 0 2px 8px rgba(0,0,0,0.4);
-}
-.masthead-center .subtitle {
-    font-family: 'EB Garamond', serif;
-    font-style: italic;
-    font-size: 0.88rem;
-    color: var(--accent-gold);
-    letter-spacing: 0.1em;
-    margin-top: 2px;
-}
-.masthead-ornament {
-    color: var(--accent-gold);
-    font-size: 1.5rem;
-    opacity: 0.7;
-}
-
-/* ── Decorative rule ── */
-.ornamental-rule {
+    color: #F5E6C8;
+    letter-spacing: 0.25em;
     text-align: center;
-    color: var(--accent-gold);
-    font-size: 1.1rem;
-    letter-spacing: 0.3em;
-    margin: 0;
-    padding: 7px 0 4px 0;
-    background: var(--espresso);
-    border-bottom: 1px solid var(--coffee);
+    text-shadow: 0 2px 8px rgba(0,0,0,0.55);
+    flex: 1;
 }
-
-/* ── Tab navigation ── */
-.tab-bar {
-    display: flex;
-    gap: 0;
-    background: var(--espresso);
-    padding: 0 40px;
-    border-bottom: 2px solid var(--accent-gold);
+.vhdr-right {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.8rem;
+    color: #B8936A;
+    text-align: right;
+    letter-spacing: 0.05em;
+    line-height: 1.6;
+    min-width: 185px;
 }
-.tab-item {
-    padding: 11px 28px;
-    cursor: pointer;
-    font-family: 'Lato', sans-serif;
-    font-size: 0.82rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--warm-beige);
-    border-bottom: 3px solid transparent;
-    transition: all 0.2s ease;
+.ornament {
+    text-align: center;
+    color: #9B7245;
+    letter-spacing: 0.55em;
+    margin: 0.35rem 0 0.55rem 0;
+    font-size: 0.95rem;
     user-select: none;
 }
-.tab-item:hover { color: var(--accent-gold); border-bottom-color: var(--coffee); }
-.tab-item.active { color: var(--accent-gold); border-bottom-color: var(--accent-gold); background: rgba(201,168,76,0.08); }
 
-/* ── Streamlit radio as tab strip ── */
-div[data-testid="stHorizontalBlock"] .stRadio > label { display: none; }
-.stRadio [data-testid="stWidgetLabel"] { display: none !important; }
-.stRadio > div > div {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 0 !important;
-    background: var(--espresso);
-    padding: 0 20px;
-    border-bottom: 2px solid var(--accent-gold);
+/* ─── NAV STRIP ───────────────────────────────────────────────────────────── */
+.nav-strip {
+    background: linear-gradient(135deg, #EDE0C4 0%, #E2D0AA 50%, #EDE0C4 100%);
+    border: 1.5px solid var(--border);
+    border-radius: 11px;
+    padding: 0.6rem 1.3rem 0.45rem 1.3rem;
+    margin-bottom: 0.85rem;
+    box-shadow: 0 2px 12px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.45);
 }
-.stRadio label {
-    padding: 11px 26px !important;
-    font-family: 'Lato', sans-serif !important;
-    font-size: 0.78rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.12em !important;
-    text-transform: uppercase !important;
-    color: var(--warm-beige) !important;
-    border-radius: 0 !important;
-    border-bottom: 3px solid transparent !important;
-    transition: all 0.2s !important;
-    cursor: pointer !important;
-}
-.stRadio label:hover { color: var(--accent-gold) !important; }
-.stRadio label[data-checked="true"],
-.stRadio input:checked + label,
-.stRadio div[aria-checked="true"] > label { color: var(--accent-gold) !important; border-bottom-color: var(--accent-gold) !important; }
 
-/* ── Section card ── */
-.vintage-card {
-    background: var(--white-smoke);
-    border: 1px solid var(--warm-beige);
-    border-radius: 4px;
-    padding: 22px 22px 18px 22px;
-    box-shadow: 3px 3px 14px var(--shadow), inset 0 0 0 1px rgba(255,255,255,0.6);
-    margin-bottom: 16px;
-    position: relative;
-}
-.vintage-card::before {
-    content: '';
-    position: absolute;
-    top: 6px; left: 6px; right: 6px; bottom: 6px;
-    border: 1px solid var(--warm-beige);
-    border-radius: 2px;
-    pointer-events: none;
-    opacity: 0.4;
-}
-.card-title {
+/* ─── SECTION TITLE ───────────────────────────────────────────────────────── */
+.stitle {
     font-family: 'Playfair Display', serif;
-    font-size: 1.0rem;
-    font-weight: 600;
-    color: var(--espresso);
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--brown-dk);
+    border-bottom: 2px solid var(--brown-lt);
+    padding-bottom: 0.28rem;
+    margin-bottom: 0.75rem;
     letter-spacing: 0.04em;
-    margin-bottom: 14px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--warm-beige);
+}
+.ssub {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1rem;
+    color: #6B4226;
+    font-style: italic;
+    margin-bottom: 0.85rem;
+}
+
+/* ─── PANEL CARDS ─────────────────────────────────────────────────────────── */
+.panel {
+    background: linear-gradient(160deg, var(--cream) 0%, var(--cream2) 100%);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 1.1rem 1.25rem;
+    box-shadow: 3px 4px 18px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.55);
+    margin-bottom: 0.75rem;
+}
+.panel-dark {
+    background: linear-gradient(160deg, #EDE0C4 0%, #E5D4AE 100%);
+    border: 1.5px solid var(--border2);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    box-shadow: 3px 4px 18px var(--shadow);
+    margin-bottom: 0.75rem;
+}
+.panel-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--brown-md);
+    letter-spacing: 0.04em;
+    margin-bottom: 0.5rem;
     display: flex;
     align-items: center;
-    gap: 8px;
-}
-.card-title .icon { font-size: 1.1rem; }
-
-/* ── Inputs ── */
-.stTextInput > div > div > input,
-.stNumberInput > div > div > input,
-.stSelectbox > div > div {
-    background: var(--cream) !important;
-    border: 1px solid var(--tan) !important;
-    border-radius: 3px !important;
-    color: var(--ink) !important;
-    font-family: 'EB Garamond', serif !important;
-    font-size: 1rem !important;
-    box-shadow: inset 1px 1px 4px rgba(0,0,0,0.06) !important;
-    transition: border-color 0.2s !important;
-}
-.stTextInput > div > div > input:focus,
-.stNumberInput > div > div > input:focus {
-    border-color: var(--coffee) !important;
-    box-shadow: inset 1px 1px 4px rgba(0,0,0,0.06), 0 0 0 2px rgba(123,92,62,0.15) !important;
-}
-.stTextInput label, .stNumberInput label, .stSelectbox label {
-    font-family: 'Lato', sans-serif !important;
-    font-size: 0.76rem !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.1em !important;
-    color: var(--coffee) !important;
+    gap: 0.4rem;
 }
 
-/* ── Primary button ── */
+/* ─── WIDGET OVERRIDES ────────────────────────────────────────────────────── */
+div[data-testid="stRadio"] label > div p {
+    font-family: 'Playfair Display', serif !important;
+    font-size: 0.97rem !important;
+    color: var(--brown-dk) !important;
+    font-weight: 600 !important;
+}
+.stSelectbox > label,
+.stNumberInput > label,
+.stTextInput > label {
+    font-family: 'Crimson Text', serif !important;
+    color: #4A2A12 !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.02em !important;
+}
+.stSelectbox [data-baseweb="select"] > div,
+.stTextInput input,
+.stNumberInput input {
+    border: 1.5px solid var(--border) !important;
+    border-radius: 7px !important;
+    background-color: var(--cream) !important;
+    color: var(--brown-dk) !important;
+    font-family: 'Crimson Text', serif !important;
+    font-size: 0.97rem !important;
+    box-shadow: inset 0 1px 5px rgba(59,31,12,0.07) !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
+}
+.stSelectbox [data-baseweb="select"] > div:focus-within,
+.stTextInput input:focus,
+.stNumberInput input:focus {
+    border-color: var(--brown-lt) !important;
+    box-shadow: 0 0 0 2.5px rgba(139,94,60,0.2) !important;
+}
+
+/* ─── BUTTON ──────────────────────────────────────────────────────────────── */
 .stButton > button {
-    background: linear-gradient(160deg, var(--coffee) 0%, var(--espresso) 100%) !important;
-    color: var(--cream) !important;
-    border: 1px solid var(--accent-gold) !important;
-    border-radius: 3px !important;
-    font-family: 'Lato', sans-serif !important;
-    font-size: 0.78rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.14em !important;
-    text-transform: uppercase !important;
-    padding: 10px 20px !important;
-    box-shadow: 2px 3px 10px var(--shadow) !important;
-    transition: all 0.2s ease !important;
-    width: 100% !important;
+    width: 100%;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--brown-md) 0%, var(--brown-lt) 55%, #7A4F2E 100%);
+    color: #F5E6C8;
+    font-family: 'Playfair Display', serif;
+    font-size: 0.97rem;
+    font-weight: 700;
+    border: 1px solid #9B7245;
+    letter-spacing: 0.09em;
+    padding: 0.55rem 1rem;
+    box-shadow: 0 3px 14px var(--shadow-dk), inset 0 1px 0 rgba(255,255,255,0.1);
+    transition: all 0.25s ease;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.35);
 }
 .stButton > button:hover {
-    background: linear-gradient(160deg, var(--accent-rust) 0%, var(--espresso) 100%) !important;
-    box-shadow: 2px 4px 16px var(--shadow-deep) !important;
-    transform: translateY(-1px) !important;
-    border-color: var(--accent-gold) !important;
+    background: linear-gradient(135deg, #1E0F06 0%, var(--brown-md) 100%);
+    transform: translateY(-1.5px);
+    box-shadow: 0 5px 20px var(--shadow-dk);
+    color: var(--gold-lt);
 }
-.stButton > button:active { transform: translateY(0) !important; }
+.stButton > button:active { transform: translateY(0px); }
 
-/* ── Metric cards ── */
-div[data-testid="metric-container"] {
-    background: var(--white-smoke) !important;
-    border: 1px solid var(--warm-beige) !important;
-    border-top: 3px solid var(--coffee) !important;
-    border-radius: 3px !important;
-    padding: 14px 16px !important;
-    box-shadow: 2px 3px 10px var(--shadow) !important;
+/* ─── METRICS ─────────────────────────────────────────────────────────────── */
+[data-testid="metric-container"] {
+    background: linear-gradient(135deg, #EDE0C4, #E2CFA8) !important;
+    border: 1.5px solid var(--border) !important;
+    border-radius: 10px !important;
+    padding: 0.7rem 0.9rem !important;
+    box-shadow: 2px 3px 11px var(--shadow) !important;
 }
-div[data-testid="metric-container"] label {
-    font-family: 'Lato', sans-serif !important;
-    font-size: 0.72rem !important;
-    font-weight: 700 !important;
-    letter-spacing: 0.1em !important;
-    text-transform: uppercase !important;
-    color: var(--coffee) !important;
-}
-div[data-testid="metric-container"] [data-testid="metric-value"] {
-    font-family: 'Playfair Display', serif !important;
-    font-size: 1.5rem !important;
-    color: var(--espresso) !important;
-}
-
-/* ── DataFrames / tables ── */
-.stDataFrame {
-    border: 1px solid var(--tan) !important;
-    border-radius: 3px !important;
-    overflow: hidden !important;
-}
-.stDataFrame table { border-collapse: collapse !important; width: 100% !important; }
-.stDataFrame thead th {
-    background: var(--espresso) !important;
-    color: var(--cream) !important;
-    font-family: 'Lato', sans-serif !important;
-    font-size: 0.72rem !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.1em !important;
-    padding: 8px 10px !important;
-    border-bottom: 2px solid var(--accent-gold) !important;
-}
-.stDataFrame tbody tr:nth-child(even) td { background: var(--parchment) !important; }
-.stDataFrame tbody tr:nth-child(odd) td { background: var(--white-smoke) !important; }
-.stDataFrame tbody td {
-    font-family: 'EB Garamond', serif !important;
-    font-size: 0.9rem !important;
-    color: var(--ink) !important;
-    padding: 6px 10px !important;
-    border-bottom: 1px solid var(--warm-beige) !important;
-}
-.stDataFrame tbody tr:hover td { background: #e8dcc6 !important; }
-
-/* ── Expander ── */
-.streamlit-expanderHeader {
-    background: var(--parchment) !important;
-    border: 1px solid var(--tan) !important;
-    border-radius: 3px !important;
-    font-family: 'Lato', sans-serif !important;
+[data-testid="stMetricLabel"] p {
+    font-family: 'Cormorant Garamond', serif !important;
+    color: #6B4226 !important;
     font-size: 0.78rem !important;
-    font-weight: 700 !important;
-    text-transform: uppercase !important;
-    letter-spacing: 0.1em !important;
-    color: var(--coffee) !important;
-}
-.streamlit-expanderContent {
-    border: 1px solid var(--warm-beige) !important;
-    border-top: none !important;
-    background: var(--white-smoke) !important;
-}
-
-/* ── Alert / info boxes ── */
-.stAlert {
-    border-radius: 3px !important;
-    border-left: 4px solid var(--coffee) !important;
-    background: var(--cream) !important;
-    font-family: 'EB Garamond', serif !important;
-}
-
-/* ── Divider ── */
-hr { border-color: var(--warm-beige) !important; }
-
-/* ── History panel ── */
-.history-item {
-    background: var(--white-smoke);
-    border: 1px solid var(--warm-beige);
-    border-left: 4px solid var(--coffee);
-    border-radius: 3px;
-    padding: 12px 14px;
-    margin-bottom: 8px;
-    font-family: 'EB Garamond', serif;
-    font-size: 0.95rem;
-    transition: box-shadow 0.2s;
-}
-.history-item:hover { box-shadow: 2px 3px 10px var(--shadow); }
-.history-meta {
-    font-family: 'Lato', sans-serif;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    color: var(--coffee);
-    margin-bottom: 4px;
-}
-.history-answer {
-    font-family: 'Playfair Display', serif;
-    font-weight: 600;
-    color: var(--espresso);
-    font-size: 1.05rem;
-}
-
-/* ── Section labels ── */
-.section-label {
-    font-family: 'Lato', sans-serif;
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: var(--coffee);
-    margin-bottom: 4px;
-    opacity: 0.8;
-}
-
-/* ── Number input spinners ── */
-.stNumberInput button {
-    background: var(--parchment) !important;
-    border-color: var(--tan) !important;
-    color: var(--coffee) !important;
-}
-
-/* ── Scrollbar ── */
-::-webkit-scrollbar { width: 7px; height: 7px; }
-::-webkit-scrollbar-track { background: var(--parchment); }
-::-webkit-scrollbar-thumb { background: var(--tan); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--coffee); }
-
-/* ── Data editor ── */
-.stDataEditor thead th {
-    background: var(--espresso) !important;
-    color: var(--cream) !important;
-    font-family: 'Lato', sans-serif !important;
-    font-size: 0.72rem !important;
-    font-weight: 700 !important;
     letter-spacing: 0.08em !important;
     text-transform: uppercase !important;
 }
-
-/* ── Selectbox dropdown ── */
-.stSelectbox [data-baseweb="select"] > div:first-child {
-    background: var(--cream) !important;
-    border-color: var(--tan) !important;
+[data-testid="stMetricValue"] {
+    font-family: 'Playfair Display', serif !important;
+    color: var(--brown-dk) !important;
+    font-size: 1.45rem !important;
 }
 
-/* ── Toast ── */
-.stToast { background: var(--espresso) !important; color: var(--cream) !important; border-left: 4px solid var(--accent-gold) !important; }
+/* ─── DATAFRAME ───────────────────────────────────────────────────────────── */
+[data-testid="stDataFrame"] {
+    border: 1.5px solid var(--border) !important;
+    border-radius: 9px !important;
+    overflow: hidden !important;
+}
+[data-testid="stDataFrame"] table {
+    font-family: 'Crimson Text', serif !important;
+}
+[data-testid="stDataFrame"] th {
+    background-color: #5C3317 !important;
+    color: #F5E6C8 !important;
+    font-family: 'Playfair Display', serif !important;
+    font-size: 0.82rem !important;
+    letter-spacing: 0.05em !important;
+}
+[data-testid="stDataFrame"] tr:hover {
+    background-color: #EDE0C4 !important;
+}
 
-/* ── Module title ── */
-.module-header {
+/* ─── INFO / SUCCESS ──────────────────────────────────────────────────────── */
+[data-testid="stInfo"] {
+    background-color: #EDE0C4 !important;
+    border-left: 4px solid var(--brown-lt) !important;
+    border-radius: 7px !important;
+    font-family: 'Crimson Text', serif !important;
+}
+[data-testid="stSuccess"] {
+    background-color: #E4D8C0 !important;
+    border-left: 4px solid var(--brown-md) !important;
+    border-radius: 7px !important;
+    font-family: 'Crimson Text', serif !important;
+}
+[data-testid="stAlert"] {
+    font-family: 'Crimson Text', serif !important;
+    border-radius: 7px !important;
+}
+
+/* ─── HR ──────────────────────────────────────────────────────────────────── */
+hr {
+    border: none !important;
+    border-top: 1.5px solid var(--border) !important;
+    margin: 0.6rem 0 !important;
+}
+
+/* ─── SIDEBAR ─────────────────────────────────────────────────────────────── */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #1E0F06 0%, #2C1A0E 40%, #3B2210 100%) !important;
+    border-right: 2px solid #5C3317 !important;
+}
+[data-testid="stSidebar"] * {
+    color: #E8D5B0 !important;
+}
+[data-testid="stSidebar"] .stButton > button {
+    background: linear-gradient(135deg, #3B2210, #5C3317) !important;
+    border-color: #7A4F2E !important;
+    color: #F5E6C8 !important;
+    font-size: 0.85rem !important;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+    background: linear-gradient(135deg, #5C3317, #8B5E3C) !important;
+}
+
+/* ─── HISTORY CARD INSIDE SIDEBAR ─────────────────────────────────────────── */
+.hist-card {
+    background: rgba(92,51,23,0.35);
+    border: 1px solid rgba(200,169,122,0.35);
+    border-radius: 9px;
+    padding: 0.7rem 0.85rem;
+    margin-bottom: 0.6rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    transition: background 0.2s;
+}
+.hist-card:hover { background: rgba(92,51,23,0.55); }
+.hist-method {
     font-family: 'Playfair Display', serif;
-    font-size: 1.55rem;
+    font-size: 0.82rem;
     font-weight: 700;
-    color: var(--espresso);
-    letter-spacing: 0.02em;
-    margin: 0 0 2px 0;
+    color: #E8C98A;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.2rem;
 }
-.module-sub {
-    font-family: 'EB Garamond', serif;
+.hist-eq {
+    font-family: 'Crimson Text', serif;
+    font-size: 0.88rem;
+    color: #D4BC96;
     font-style: italic;
-    font-size: 1.0rem;
-    color: var(--coffee);
-    margin-bottom: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.15rem;
+}
+.hist-ans {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.9rem;
+    color: #F5E6C8;
+    font-weight: 600;
+}
+.hist-ts {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.75rem;
+    color: #9B7A55;
+    margin-top: 0.2rem;
+    letter-spacing: 0.04em;
+}
+.hist-empty {
+    text-align: center;
+    padding: 1.5rem 0.5rem;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.95rem;
+    font-style: italic;
+    color: #7A5A3A;
+}
+.sidebar-hdr {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #E8C98A;
+    letter-spacing: 0.1em;
+    text-align: center;
+    padding: 0.2rem 0 0.6rem 0;
+    border-bottom: 1px solid rgba(200,169,122,0.35);
+    margin-bottom: 0.7rem;
+}
+.sidebar-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 0.82rem;
+    color: #B8936A;
+    text-align: center;
+    margin-bottom: 0.25rem;
+    letter-spacing: 0.06em;
 }
 
-/* ── Spinner ── */
-.stSpinner > div { border-top-color: var(--coffee) !important; }
-
-/* full-width padding */
-.main-container { padding: 20px 32px 32px 32px; }
+/* ─── PLACEHOLDER TEXT ───────────────────────────────────────────────────── */
+.placeholder-box {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: #9B7245;
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-style: italic;
+    line-height: 1.7;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
-#  SESSION STATE
-# ─────────────────────────────────────────────
-if "history" not in st.session_state:
-    st.session_state.history = []
 
-# ─────────────────────────────────────────────
-#  MASTHEAD
-# ─────────────────────────────────────────────
+# ══════════════════════════════════════════════════════════════════════════════
+#  SIDEBAR — SAVE HISTORY PANEL
+# ══════════════════════════════════════════════════════════════════════════════
+with st.sidebar:
+    st.markdown("""
+        <div style="padding-top:0.4rem;">
+            <div class="sidebar-hdr">✦ CALCULATION HISTORY ✦</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    if st.session_state.history:
+        clear_col, _ = st.columns([1, 0.01])
+        with clear_col:
+            if st.button("🗑  Clear History"):
+                st.session_state.history = []
+                st.rerun()
+
+        st.markdown("<div style='margin-top:0.5rem;'>", unsafe_allow_html=True)
+        # Render newest first
+        for entry in reversed(st.session_state.history):
+            st.markdown(f"""
+                <div class="hist-card">
+                    <div class="hist-method">{entry['type']} · {entry['method']}</div>
+                    <div class="hist-eq">{entry['equation']}</div>
+                    <div class="hist-ans">⟶ {entry['answer']}</div>
+                    <div class="hist-ts">🕐 {entry['timestamp']}</div>
+                </div>
+            """, unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        st.markdown("""
+            <div class="hist-empty">
+                ✦ No calculations yet.<br>Results will appear here after solving.
+            </div>
+        """, unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  TOP HEADER
+# ══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
-<div class="masthead">
-  <div class="masthead-left">
-    <span>Diosamabel B. Penaso</span>
-    BSCOMPE-2
-  </div>
-  <div class="masthead-center">
-    <h1>✦ Numerical Project ✦</h1>
-    <div class="subtitle">Root Finding Analysis &amp; Matrix Operations</div>
-  </div>
-  <div class="masthead-ornament">⚙</div>
-</div>
-<div class="ornamental-rule">· · · ✦ · · ·</div>
+    <div class="vhdr">
+        <div class="vhdr-name">DIOSAMABEL B. PENASO<br>BSCOMPE-2</div>
+        <div class="vhdr-title">✦ &nbsp; NUMERICAL PROJECT &nbsp; ✦</div>
+        <div class="vhdr-right">Numerical Methods<br>Analysis</div>
+    </div>
+    <div class="ornament">— ✦ ◆ ✦ —</div>
 """, unsafe_allow_html=True)
 
-# ─────────────────────────────────────────────
-#  TOP NAV (radio styled as tabs)
-# ─────────────────────────────────────────────
-with st.container():
-    app_mode = st.radio(
-        "Module",
-        ["Root Finding Methods", "Matrix Operations", "Calculation History"],
-        horizontal=True,
-        label_visibility="collapsed"
-    )
 
-st.markdown('<div class="main-container">', unsafe_allow_html=True)
+# ══════════════════════════════════════════════════════════════════════════════
+#  TOP NAVIGATION STRIP
+# ══════════════════════════════════════════════════════════════════════════════
+st.markdown('<div class="nav-strip">', unsafe_allow_html=True)
+app_mode = st.radio(
+    "**Select Module**",
+    ["Root Finding Analysis", "Matrix Operations"],
+    horizontal=True,
+    label_visibility="visible"
+)
+st.markdown('</div>', unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════
-#  MODULE 1 — ROOT FINDING
-# ══════════════════════════════════════════════
-if app_mode == "Root Finding Methods":
-    st.markdown('<div class="module-header">Root Finding Analysis</div>', unsafe_allow_html=True)
-    st.markdown('<div class="module-sub">Locate equation roots via classical numerical methods with iterative refinement</div>', unsafe_allow_html=True)
 
-    left_col, right_col = st.columns([1, 2.2], gap="large")
+# ══════════════════════════════════════════════════════════════════════════════
+#  MODULE 1 — ROOT FINDING ANALYSIS
+# ══════════════════════════════════════════════════════════════════════════════
+if app_mode == "Root Finding Analysis":
+    st.markdown('<div class="stitle">⚙ Root Finding Analysis</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ssub">Select a numerical method, configure parameters, and instantly view the iteration table and graph.</div>', unsafe_allow_html=True)
 
-    # ── LEFT: Inputs ──────────────────────────
-    with left_col:
+    # ── THREE-COLUMN DASHBOARD LAYOUT ──
+    col_left, col_right = st.columns([1, 2.35])
 
-        # Equation & Method card
-        st.markdown('<div class="vintage-card"><div class="card-title"><span class="icon">𝑓</span> Equation & Method</div>', unsafe_allow_html=True)
-        eq_str = st.text_input("Equation  f(x)", value="x**3 - x - 2", help="Use Python syntax: x**2, sp.sin(x), sp.exp(x)")
-        method = st.selectbox("Algorithm", [
-            "Incremental Search",
+    # ────────────────── LEFT — INPUTS ──────────────────
+    with col_left:
+        st.markdown('<div class="panel">', unsafe_allow_html=True)
+        st.markdown('<div class="panel-title">⚙ Parameters</div>', unsafe_allow_html=True)
+
+        eq_str   = st.text_input("Equation  f(x)", value="x**3 - x - 2",
+                                 help="Use Python syntax: x**2, sin(x), exp(x), log(x)")
+        method   = st.selectbox("Algorithm", [
+            "Incremental Method",
             "Bisection Method",
-            "Regula-Falsi",
-            "Newton-Raphson",
-            "Secant Method"
+            "Regula-Falsi Method",
+            "Newton-Raphson Method",
+            "Secant Method",
         ])
-        st.markdown('</div>', unsafe_allow_html=True)
 
-        # Parameters card
-        st.markdown('<div class="vintage-card"><div class="card-title"><span class="icon">⚙</span> Parameters</div>', unsafe_allow_html=True)
-        if method in ["Bisection Method", "Regula-Falsi", "Incremental Search"]:
-            xl = st.number_input("Lower Bound  (xₗ)", value=1.0)
-            xu = st.number_input("Upper Bound  (x_u)", value=2.0)
+        if method in ["Bisection Method", "Regula-Falsi Method", "Incremental Method"]:
+            xl = st.number_input("Lower Bound  (xl)", value=1.0, format="%.4f")
+            xu = st.number_input("Upper Bound  (xu)", value=2.0, format="%.4f")
         elif method == "Newton-Raphson":
-            x0 = st.number_input("Initial Guess  (x₀)", value=1.0)
+            x0 = st.number_input("Initial Guess  (x0)", value=1.0, format="%.4f")
         elif method == "Secant Method":
-            x0 = st.number_input("First Guess  (x₀)", value=1.0)
-            x1 = st.number_input("Second Guess  (x₁)", value=2.0)
+            x0 = st.number_input("First Guess   (x0)", value=1.0, format="%.4f")
+            x1 = st.number_input("Second Guess  (x1)", value=2.0, format="%.4f")
 
-        tol     = st.number_input("Tolerance  (ε)", value=0.0001, format="%.6f")
-        max_iter = int(st.number_input("Max Iterations", value=50, step=1, min_value=1, max_value=500))
-        st.markdown('</div>', unsafe_allow_html=True)
+        c_tol, c_iter = st.columns(2)
+        tol      = c_tol.number_input("Tolerance",      value=0.0001, format="%.6f")
+        max_iter = c_iter.number_input("Max Iterations", value=50, step=1)
 
-        solve_btn = st.button("▶  Compute Root", use_container_width=True)
+        st.markdown("<div style='margin-top:0.6rem;'>", unsafe_allow_html=True)
+        solve_btn = st.button("⟳  Calculate Root", use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)   # /panel
 
-    # ── RIGHT: Results ────────────────────────
-    with right_col:
+    # ────────────────── RIGHT — TABLE + GRAPH ──────────────────
+    with col_right:
+
+        # ── COMPUTE ON BUTTON PRESS ──
         if solve_btn:
             try:
-                xsym = sp.Symbol('x')
+                xs   = sp.Symbol('x')
                 expr = sp.sympify(eq_str)
-                f  = sp.lambdify(xsym, expr, 'numpy')
-                df_sym = sp.diff(expr, xsym)
-                dff = sp.lambdify(xsym, df_sym, 'numpy')
+                f    = sp.lambdify(xs, expr, 'numpy')
+                dfdx = sp.lambdify(xs, sp.diff(expr, xs), 'numpy')
 
-                results, root, iterations, final_err = [], None, 0, 0.0
+                results, root, iterations, final_err = [], None, 0, 0
 
-                # ── Algorithms ──────────────────
                 if method == "Bisection Method":
                     _xl, _xu = xl, xu
-                    for i in range(max_iter):
+                    for i in range(int(max_iter)):
                         xr  = (_xl + _xu) / 2
                         err = abs(_xu - _xl) / 2
-                        results.append({"Iter": i+1, "xₗ": round(_xl,6), "x_u": round(_xu,6),
-                                        "xᵣ": round(xr,6), "f(xᵣ)": round(f(xr),6), "Error": round(err,6)})
+                        results.append({"Iter": i+1, "xl": round(_xl,7), "xu": round(_xu,7),
+                                         "xr": round(xr,7), "f(xr)": round(float(f(xr)),7), "Error": round(err,8)})
                         if f(xr) == 0 or err < tol:
                             root, iterations, final_err = xr, i+1, err; break
-                        if f(_xl)*f(xr) < 0: _xu = xr
+                        if f(_xl) * f(xr) < 0: _xu = xr
                         else: _xl = xr
 
-                elif method == "Regula-Falsi":
+                elif method == "Regula-Falsi Method":
                     _xl, _xu = xl, xu
-                    for i in range(max_iter):
-                        xr  = _xu - (f(_xu)*(_xl - _xu)) / (f(_xl) - f(_xu))
+                    for i in range(int(max_iter)):
+                        xr  = _xu - (f(_xu) * (_xl - _xu)) / (f(_xl) - f(_xu))
                         err = abs(f(xr))
-                        results.append({"Iter": i+1, "xₗ": round(_xl,6), "x_u": round(_xu,6),
-                                        "xᵣ": round(xr,6), "f(xᵣ)": round(f(xr),6), "Error": round(err,6)})
+                        results.append({"Iter": i+1, "xl": round(_xl,7), "xu": round(_xu,7),
+                                         "xr": round(xr,7), "f(xr)": round(float(f(xr)),7), "Error": round(err,8)})
                         if err < tol:
                             root, iterations, final_err = xr, i+1, err; break
-                        if f(_xl)*f(xr) < 0: _xu = xr
+                        if f(_xl) * f(xr) < 0: _xu = xr
                         else: _xl = xr
 
-                elif method == "Newton-Raphson":
+                elif method == "Newton-Raphson Method":
                     xr = x0
-                    for i in range(max_iter):
-                        fxr, dfxr = f(xr), dff(xr)
-                        xr_new    = xr - fxr/dfxr
-                        err       = abs(xr_new - xr)
-                        results.append({"Iter": i+1, "xᵢ": round(xr,6), "f(xᵢ)": round(fxr,6),
-                                        "f′(xᵢ)": round(dfxr,6), "xᵢ₊₁": round(xr_new,6), "Error": round(err,6)})
+                    for i in range(int(max_iter)):
+                        fxr, dfxr = f(xr), dfdx(xr)
+                        xr_new = xr - fxr / dfxr
+                        err = abs(xr_new - xr)
+                        results.append({"Iter": i+1, "xi": round(xr,7),
+                                         "f(xi)": round(float(fxr),7), "f'(xi)": round(float(dfxr),7),
+                                         "xi+1": round(xr_new,7), "Error": round(err,8)})
                         xr = xr_new
                         if err < tol:
                             root, iterations, final_err = xr, i+1, err; break
 
                 elif method == "Secant Method":
                     _x0, _x1 = x0, x1
-                    for i in range(max_iter):
-                        fx1, fx0 = f(_x1), f(_x0)
-                        x2  = _x1 - (fx1*(_x0 - _x1)) / (fx0 - fx1)
+                    for i in range(int(max_iter)):
+                        fx1_, fx0_ = f(_x1), f(_x0)
+                        x2  = _x1 - (fx1_ * (_x0 - _x1)) / (fx0_ - fx1_)
                         err = abs(x2 - _x1)
-                        results.append({"Iter": i+1, "x(i-1)": round(_x0,6), "x(i)": round(_x1,6),
-                                        "x(i+1)": round(x2,6), "f(x(i+1))": round(f(x2),6), "Error": round(err,6)})
+                        results.append({"Iter": i+1, "x(i-1)": round(_x0,7), "x(i)": round(_x1,7),
+                                         "x(i+1)": round(x2,7), "f(x(i+1))": round(float(f(x2)),7), "Error": round(err,8)})
                         _x0, _x1 = _x1, x2
                         if err < tol:
                             root, iterations, final_err = x2, i+1, err; break
 
-                elif method == "Incremental Search":
+                elif method == "Incremental Method":
                     step, curr_x = 0.1, xl
-                    for i in range(max_iter):
+                    for i in range(int(max_iter)):
                         next_x = curr_x + step
-                        results.append({"Iter": i+1, "x": round(curr_x,6), "f(x)": round(f(curr_x),6),
-                                        "x_next": round(next_x,6), "f(x_next)": round(f(next_x),6)})
-                        if f(curr_x)*f(next_x) < 0:
-                            root, iterations, final_err = (curr_x+next_x)/2, i+2, abs(next_x-curr_x)/2; break
+                        results.append({"Iter": i+1, "x": round(curr_x,7), "f(x)": round(float(f(curr_x)),7)})
+                        if f(curr_x) * f(next_x) < 0:
+                            root, iterations, final_err = (curr_x + next_x) / 2, i+2, 0; break
                         curr_x = next_x
 
-                # ── Display results ──────────────
                 if root is not None:
-                    st.toast("Root located successfully", icon="✦")
-                    time.sleep(0.3)
-
-                    # Save to history
-                    st.session_state.history.append({
-                        "method":    method,
-                        "equation":  eq_str,
-                        "root":      round(root, 8),
-                        "iters":     iterations,
-                        "error":     round(final_err, 8) if final_err else 0,
-                        "timestamp": datetime.now().strftime("%Y-%m-%d  %H:%M:%S")
-                    })
-
-                    # Metric strip
-                    m1, m2, m3 = st.columns(3)
-                    m1.metric("Root  xᵣ",       f"{root:.7f}")
-                    m2.metric("Iterations",      iterations)
-                    m3.metric("Final Error  ε",  f"{final_err:.2e}" if final_err else "—")
-
-                    st.markdown("---")
-
-                    # Upper right: table  |  Lower right: graph
-                    tbl_col, _ = st.columns([1, 0.001])
-                    with tbl_col:
-                        st.markdown('<div class="card-title"><span class="icon">📋</span> Iteration Table</div>', unsafe_allow_html=True)
-                        df_results = pd.DataFrame(results)
-                        st.dataframe(df_results, use_container_width=True, height=min(320, 42 + 35*len(results)))
-
-                    st.markdown("---")
-
-                    # Graph
-                    st.markdown('<div class="card-title"><span class="icon">📈</span> Function Graph</div>', unsafe_allow_html=True)
-                    x_vals = np.linspace(root - 3, root + 3, 400)
-                    try:
-                        y_vals = f(x_vals)
-                        y_vals = np.where(np.abs(y_vals) > 200, np.nan, y_vals)
-                    except Exception:
-                        y_vals = np.zeros_like(x_vals)
-
+                    # Build Plotly figure with vintage palette
+                    x_vals = np.linspace(root - 3, root + 3, 500)
+                    y_vals = f(x_vals)
                     fig = go.Figure()
                     fig.add_trace(go.Scatter(
                         x=x_vals, y=y_vals, mode='lines', name='f(x)',
-                        line=dict(color='#7B5C3E', width=2.5)
+                        line=dict(color='#5C3317', width=2.5)
                     ))
-                    fig.add_hline(y=0, line_dash="dot", line_color="#4A3728", line_width=1.2)
-                    fig.add_vline(x=0, line_dash="dot", line_color="#4A3728", line_width=1.2)
+                    fig.add_hline(y=0, line_dash="dash", line_color="#9B7245", line_width=1.3)
+                    fig.add_vline(x=0, line_dash="dash", line_color="#9B7245", line_width=1.3)
                     fig.add_trace(go.Scatter(
-                        x=[root], y=[0], mode='markers', name=f'Root ≈ {root:.5f}',
-                        marker=dict(color='#C9A84C', size=13, symbol='x-thin',
-                                    line=dict(width=3, color='#8B4A2A'))
+                        x=[root], y=[0], mode='markers', name=f'Root ≈ {root:.6f}',
+                      marker=dict(color='#8B1A1A', size=14, symbol='circle', line=dict(color='#2C1A0E', width=2))
                     ))
                     fig.update_layout(
-                        paper_bgcolor='#FAF7F2',
-                        plot_bgcolor='#F5F0E8',
-                        font=dict(family='EB Garamond, serif', color='#1A1208'),
-                        title=dict(text=f"f(x) = {eq_str}", font=dict(family='Playfair Display, serif', size=15, color='#4A3728')),
-                        xaxis=dict(title="x", gridcolor='#D9C9A8', linecolor='#C4A882', zerolinecolor='#7B5C3E'),
-                        yaxis=dict(title="f(x)", gridcolor='#D9C9A8', linecolor='#C4A882', zerolinecolor='#7B5C3E'),
-                        legend=dict(bgcolor='#EDE5D0', bordercolor='#C4A882', borderwidth=1, font=dict(size=12)),
+                        title=dict(text=f"f(x) = {eq_str}", font=dict(family="Playfair Display,serif", size=14, color="#2C1A0E")),
+                        xaxis_title="x",  yaxis_title="f(x)",
                         hovermode="x unified",
-                        margin=dict(l=10, r=10, t=50, b=10),
-                        height=370
+                        plot_bgcolor='#FBF4E6', paper_bgcolor='#FBF4E6',
+                        font=dict(family="Crimson Text,serif", color="#2C1A0E"),
+                        xaxis=dict(gridcolor='#E2CFA8', linecolor='#C4A882', zerolinecolor='#C4A882', tickfont=dict(family="Crimson Text,serif")),
+                        yaxis=dict(gridcolor='#E2CFA8', linecolor='#C4A882', zerolinecolor='#C4A882', tickfont=dict(family="Crimson Text,serif")),
+                        legend=dict(bgcolor='#EDE0C4', bordercolor='#C4A882', borderwidth=1, font=dict(family="Crimson Text,serif")),
+                        margin=dict(l=8, r=8, t=38, b=8),
+                        height=310,
                     )
-                    st.plotly_chart(fig, use_container_width=True)
 
+                    # Persist to session state
+                    st.session_state.rf_results    = results
+                    st.session_state.rf_root       = root
+                    st.session_state.rf_iterations = iterations
+                    st.session_state.rf_error      = final_err
+                    st.session_state.rf_fig        = fig
+                    st.session_state.rf_eq         = eq_str
+                    st.session_state.rf_method     = method
+
+                    # Save to history
+                    st.session_state.history.append({
+                        "type":      "Root Finding",
+                        "method":    method,
+                        "equation":  f"f(x) = {eq_str}",
+                        "answer":    f"x ≈ {root:.8f}  ({iterations} iters)",
+                        "timestamp": datetime.now().strftime("%b %d, %Y  %H:%M:%S"),
+                    })
+                    st.toast("Calculation complete!", icon="✅")
                 else:
-                    st.warning("⚠  No root found within the given bounds/iterations. Try adjusting the parameters.")
+                    st.warning("No root found within the specified bounds or iterations.")
 
             except Exception as e:
-                st.error(f"Equation error: ensure valid Python syntax (e.g. `x**2`, `sp.sin(x)`).  Details: {e}")
+                st.error(f"Error: Ensure the equation uses valid Python math (e.g., ** for exponents). → {e}")
+
+        # ── DISPLAY PERSISTED RESULTS ──
+        if st.session_state.rf_root is not None:
+            # METRICS ROW
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Calculated Root",  f"{st.session_state.rf_root:.8f}")
+            m2.metric("Total Iterations", st.session_state.rf_iterations)
+            m3.metric("Final Error",
+                      f"{st.session_state.rf_error:.3e}" if st.session_state.rf_error else "—")
+
+            # UPPER RIGHT — ITERATION TABLE
+            st.markdown('<div class="panel" style="margin-top:0.7rem;">', unsafe_allow_html=True)
+            st.markdown('<div class="panel-title">📊 Iteration Table</div>', unsafe_allow_html=True)
+            df_results = pd.DataFrame(st.session_state.rf_results)
+            st.dataframe(df_results, use_container_width=True, height=220)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            # LOWER RIGHT — GRAPH
+            st.markdown('<div class="panel">', unsafe_allow_html=True)
+            st.markdown('<div class="panel-title">📈 Function Graph</div>', unsafe_allow_html=True)
+            st.plotly_chart(st.session_state.rf_fig, use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
         else:
-            # Placeholder state
             st.markdown("""
-            <div style="text-align:center; padding: 80px 20px; color: #C4A882; font-family:'EB Garamond',serif; font-style:italic; font-size:1.15rem;">
-                Configure parameters on the left<br>and press <strong>Compute Root</strong> to begin.
-                <div style="font-size:3rem; margin-top:18px; opacity:0.35;">𝑓(𝑥) = 0</div>
-            </div>
+                <div class="panel" style="min-height:520px;">
+                    <div class="placeholder-box">
+                        ✦ Configure the parameters on the left<br>
+                        and press <em>Calculate Root</em> to begin.<br><br>
+                        The iteration table and graph will<br>
+                        appear here immediately upon solving.
+                    </div>
+                </div>
             """, unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════
-#  MODULE 2 — MATRIX OPERATIONS
-# ══════════════════════════════════════════════
-elif app_mode == "Matrix Operations":
-    st.markdown('<div class="module-header">Matrix Operations</div>', unsafe_allow_html=True)
-    st.markdown('<div class="module-sub">Interactive matrix algebra — enter values directly in the editable grid</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="vintage-card"><div class="card-title"><span class="icon">⊞</span> Select Operation</div>', unsafe_allow_html=True)
-    op = st.selectbox("Operation", [
-        "Addition", "Multiplication",
-        "System of Equations (Ax = B)",
-        "Adjoint", "Inverse", "Determinant",
-        "Power of Matrix", "Transpose"
-    ], label_visibility="collapsed")
-    st.markdown('</div>', unsafe_allow_html=True)
+# ══════════════════════════════════════════════════════════════════════════════
+#  MODULE 2 — ADVANCED MATRIX OPERATIONS
+# ══════════════════════════════════════════════════════════════════════════════
+elif app_mode == "Advanced Matrix Operations":
+    st.markdown('<div class="stitle">⊞ Advanced Matrix Operations</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ssub">Input matrices using the interactive spreadsheets and execute linear algebra operations instantly.</div>', unsafe_allow_html=True)
 
-    st.markdown("---")
+    col_left, col_right = st.columns([1, 2.0])
 
-    if op in ["Addition", "Multiplication", "System of Equations (Ax = B)"]:
-        col1, col2 = st.columns(2, gap="large")
-    else:
-        col1, col2 = st.columns([1.4, 1], gap="large")
+    # ────────────────── LEFT — INPUTS ──────────────────
+    with col_left:
+        st.markdown('<div class="panel">', unsafe_allow_html=True)
+        st.markdown('<div class="panel-title">⊞ Configuration</div>', unsafe_allow_html=True)
 
-    with col1:
-        st.markdown('<div class="vintage-card"><div class="card-title"><span class="icon">𝐴</span> Matrix A</div>', unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        rows_A = int(c1.number_input("Rows A", 1, 10, 3))
-        cols_A = int(c2.number_input("Cols A", 1, 10, 3))
-        df_A = pd.DataFrame(np.zeros((rows_A, cols_A)), columns=[f"Col {i+1}" for i in range(cols_A)])
+        op = st.selectbox("Select Operation", [
+            "Addition", "Multiplication",
+            "System of Equations (Ax = B)",
+            "Adjoint", "Inverse", "Determinant",
+            "Power of Matrix", "Transpose",
+        ])
+
+        st.markdown("<hr>", unsafe_allow_html=True)
+        st.markdown("**Matrix A**")
+        ca1, ca2 = st.columns(2)
+        rows_A = ca1.number_input("Rows", 1, 10, 3, key="ra")
+        cols_A = ca2.number_input("Cols", 1, 10, 3, key="ca")
+        df_A     = pd.DataFrame(np.zeros((rows_A, cols_A)), columns=[f"C{i+1}" for i in range(cols_A)])
         edited_A = st.data_editor(df_A, use_container_width=True, key="matrix_a")
-        A = edited_A.to_numpy()
-        st.markdown('</div>', unsafe_allow_html=True)
+        A        = edited_A.to_numpy()
 
-    if op in ["Addition", "Multiplication", "System of Equations (Ax = B)"]:
-        with col2:
-            st.markdown('<div class="vintage-card"><div class="card-title"><span class="icon">𝐵</span> Matrix B</div>', unsafe_allow_html=True)
+        needs_B = op in ["Addition", "Multiplication", "System of Equations (Ax = B)"]
+        if needs_B:
+            st.markdown("<hr>", unsafe_allow_html=True)
+            st.markdown("**Matrix B**")
             if op == "System of Equations (Ax = B)":
-                st.info("B must be a single-column results vector.")
+                st.info("Matrix B: single column vector (same rows as A).")
                 rows_B, cols_B = rows_A, 1
             elif op == "Addition":
                 rows_B, cols_B = rows_A, cols_A
             else:
-                c1b, c2b = st.columns(2)
-                rows_B = int(c1b.number_input("Rows B", 1, 10, cols_A, disabled=True))
-                cols_B = int(c2b.number_input("Cols B", 1, 10, 3))
-            df_B = pd.DataFrame(np.zeros((rows_B, cols_B)), columns=[f"Col {i+1}" for i in range(cols_B)])
+                cb1, cb2 = st.columns(2)
+                rows_B = cb1.number_input("Rows", 1, 10, int(cols_A), key="rb", disabled=True)
+                cols_B = cb2.number_input("Cols", 1, 10, 3, key="cb")
+            df_B     = pd.DataFrame(np.zeros((rows_B, cols_B)), columns=[f"C{i+1}" for i in range(cols_B)])
             edited_B = st.data_editor(df_B, use_container_width=True, key="matrix_b")
-            B = edited_B.to_numpy()
-            st.markdown('</div>', unsafe_allow_html=True)
+            B        = edited_B.to_numpy()
 
-    if op == "Power of Matrix":
-        with col2:
-            st.markdown('<div class="vintage-card"><div class="card-title"><span class="icon">ⁿ</span> Settings</div>', unsafe_allow_html=True)
-            power = int(st.number_input("Exponent n", value=2, step=1))
-            st.markdown('</div>', unsafe_allow_html=True)
+        if op == "Power of Matrix":
+            st.markdown("<hr>", unsafe_allow_html=True)
+            power = st.number_input("Exponent  n", value=2, step=1)
 
-    st.markdown("---")
-    exec_btn = st.button("▶  Execute Matrix Operation", use_container_width=True)
+        st.markdown("<div style='margin-top:0.7rem;'>", unsafe_allow_html=True)
+        exec_btn = st.button("⊞  Execute Matrix Operation", use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)   # /panel
 
-    if exec_btn:
-        try:
-            with st.spinner("Computing…"):
-                time.sleep(0.4)
-                st.markdown('<div class="card-title"><span class="icon">📊</span> Result</div>', unsafe_allow_html=True)
+    # ────────────────── RIGHT — RESULT ──────────────────
+    with col_right:
+        if exec_btn:
+            try:
+                with st.spinner("Processing..."):
+                    time.sleep(0.35)
 
-                if op == "Addition":          result = A + B
-                elif op == "Multiplication":  result = np.matmul(A, B)
-                elif op == "Transpose":       result = A.T
+                result     = None
+                ans_str    = ""
+                if op == "Addition":
+                    result  = A + B;  ans_str = "Matrix addition complete."
+                elif op == "Multiplication":
+                    result  = np.matmul(A, B);  ans_str = "Matrix product computed."
+                elif op == "Transpose":
+                    result  = A.T;  ans_str = "Matrix transposed."
                 elif op == "Determinant":
-                    det_val = np.linalg.det(A)
-                    st.metric("Determinant  det(A)", f"{det_val:.6f}")
-                    result = None
-                elif op == "Inverse":         result = np.linalg.inv(A)
+                    det_val = np.linalg.det(A);  ans_str = f"det(A) = {det_val:.6f}"
+                elif op == "Inverse":
+                    result  = np.linalg.inv(A);  ans_str = "Inverse computed."
                 elif op == "Adjoint":
-                    result = np.round(np.linalg.inv(A) * np.linalg.det(A), 6)
-                elif op == "Power of Matrix": result = np.linalg.matrix_power(A, power)
+                    result  = np.round(np.linalg.inv(A) * np.linalg.det(A), 6)
+                    ans_str = "Adjoint computed."
+                elif op == "Power of Matrix":
+                    result  = np.linalg.matrix_power(A, int(power))
+                    ans_str = f"A^{int(power)} computed."
                 elif op == "System of Equations (Ax = B)":
-                    result = np.linalg.solve(A, B)
-                    st.success("Solution vector **X** computed:")
-                else:
-                    result = None
+                    result  = np.linalg.solve(A, B);  ans_str = "System solved for X."
 
-                if result is not None:
-                    st.dataframe(pd.DataFrame(result).style.format("{:.6g}"), use_container_width=True)
-                    st.toast("Operation complete", icon="✦")
+                # Persist
+                st.session_state.mx_result = {"op": op, "result": result,
+                                               "det_val": det_val if op == "Determinant" else None,
+                                               "ans_str": ans_str}
+                st.session_state.mx_op = op
 
-        except np.linalg.LinAlgError as e:
-            st.error(f"Linear algebra error: {e}  (matrix may be singular or incompatible)")
-        except ValueError as e:
-            st.error(f"Dimension mismatch: {e}")
+                # History
+                st.session_state.history.append({
+                    "type":      "Matrix Operation",
+                    "method":    op,
+                    "equation":  f"{rows_A}×{cols_A} matrix",
+                    "answer":    ans_str,
+                    "timestamp": datetime.now().strftime("%b %d, %Y  %H:%M:%S"),
+                })
+                st.toast("Operation successful!", icon="✅")
 
-# ══════════════════════════════════════════════
-#  MODULE 3 — CALCULATION HISTORY
-# ══════════════════════════════════════════════
-elif app_mode == "Calculation History":
-    st.markdown('<div class="module-header">Calculation History</div>', unsafe_allow_html=True)
-    st.markdown('<div class="module-sub">Automatically saved log of all root-finding computations</div>', unsafe_allow_html=True)
+            except np.linalg.LinAlgError as e:
+                st.error(f"Mathematical Error: {e}  (Matrix may be singular / non-invertible.)")
+            except ValueError as e:
+                st.error(f"Dimension Mismatch: {e}")
 
-    hcol1, hcol2 = st.columns([1, 5])
-    with hcol1:
-        if st.button("🗑  Clear History"):
-            st.session_state.history = []
-            st.rerun()
+        # ── DISPLAY PERSISTED MATRIX RESULT ──
+        if st.session_state.mx_result:
+            r = st.session_state.mx_result
+            st.markdown('<div class="panel">', unsafe_allow_html=True)
+            st.markdown(f'<div class="panel-title">⊞ Result — {r["op"]}</div>', unsafe_allow_html=True)
 
-    st.markdown("---")
-
-    if not st.session_state.history:
-        st.markdown("""
-        <div style="text-align:center; padding:60px 20px; color:#C4A882;
-                    font-family:'EB Garamond',serif; font-style:italic; font-size:1.1rem;">
-            No calculations saved yet.<br>
-            Run a root-finding method to populate the history log.
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        # Table summary
-        df_hist = pd.DataFrame(st.session_state.history)
-        df_hist.index = range(1, len(df_hist)+1)
-        df_hist.columns = ["Method", "Equation", "Root", "Iterations", "Final Error", "Timestamp"]
-        st.dataframe(df_hist, use_container_width=True)
-
-        st.markdown("---")
-        st.markdown("**Detail Cards**")
-        for i, h in enumerate(reversed(st.session_state.history), 1):
-            st.markdown(f"""
-            <div class="history-item">
-                <div class="history-meta">#{len(st.session_state.history)-i+1} &nbsp;·&nbsp; {h['timestamp']} &nbsp;·&nbsp; {h['method']}</div>
-                <div style="font-size:0.95rem; color:#4A3728; margin-bottom:4px;">f(x) = {h['equation']}</div>
-                <div class="history-answer">Root ≈ {h['root']}</div>
-                <div style="font-family:'Lato',sans-serif; font-size:0.72rem; color:#7B5C3E; margin-top:4px; letter-spacing:0.06em;">
-                    {h['iters']} iterations &nbsp;|&nbsp; ε = {h['error']}
+            if r["op"] == "Determinant":
+                st.metric("Determinant Value", f'{r["det_val"]:.6f}')
+            else:
+                if r["op"] == "System of Equations (Ax = B)":
+                    st.success("✦  Solutions found for Vector X:")
+                if r["result"] is not None:
+                    st.dataframe(
+                        pd.DataFrame(r["result"]).style.format("{:.6g}"),
+                        use_container_width=True,
+                        height=420,
+                    )
+            st.markdown('</div>', unsafe_allow_html=True)
+        else:
+            st.markdown("""
+                <div class="panel" style="min-height:460px;">
+                    <div class="placeholder-box">
+                        ✦ Enter your matrix values on the left<br>
+                        and press <em>Execute Matrix Operation</em>.<br><br>
+                        The result will appear here immediately.
+                    </div>
                 </div>
-            </div>
             """, unsafe_allow_html=True)
-
-st.markdown('</div>', unsafe_allow_html=True)  # close main-container
-
-# ── Footer ──────────────────────────────────
-st.markdown("""
-<div style="
-    margin-top: 40px;
-    border-top: 1px solid #C4A882;
-    padding: 14px 32px 10px 32px;
-    text-align: center;
-    font-family: 'Lato', sans-serif;
-    font-size: 0.72rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: #7B5C3E;
-    background: #EDE5D0;
-">
-    Diosamabel B. Penaso &nbsp;·&nbsp; BSCOMPE-2 &nbsp;·&nbsp; Numerical Methods &nbsp;·&nbsp; ✦
-</div>
-""", unsafe_allow_html=True)
