@@ -6,927 +6,816 @@ import plotly.graph_objects as go
 import time
 from datetime import datetime
 
-# --- PAGE CONFIGURATION ---
+# ══════════════════════════════════════════════════════════════════════════════
+#  PAGE CONFIG
+# ══════════════════════════════════════════════════════════════════════════════
 st.set_page_config(
-    page_title="Numerical Project — Penaso",
-    page_icon="📜",
+    page_title="Numerical Project",
+    page_icon="📐",
     layout="wide",
-    initial_sidebar_state="collapsed"
+    initial_sidebar_state="expanded"
 )
 
-# --- VINTAGE BROWN ACADEMIC CSS ---
+# ══════════════════════════════════════════════════════════════════════════════
+#  SESSION STATE INIT
+# ══════════════════════════════════════════════════════════════════════════════
+for key, val in {
+    "rf_results":    [],
+    "rf_root":       None,
+    "rf_iterations": 0,
+    "rf_error":      0,
+    "rf_fig":        None,
+    "rf_eq":         "",
+    "rf_method":     "",
+    "mx_result":     None,
+    "mx_op":         "",
+    "history":       [],
+}.items():
+    if key not in st.session_state:
+        st.session_state[key] = val
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  MASTER CSS — VINTAGE BROWN ACADEMIC DASHBOARD
+# ══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Crimson+Pro:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,400&display=swap');
 
-/* ── ROOT PALETTE ── */
+/* ─── TOKENS ─────────────────────────────────────────────────────────────── */
 :root {
-    --cream:        #F5EFE0;
-    --parchment:    #EDE3C8;
-    --tan:          #D4B896;
-    --caramel:      #B8936A;
-    --brown:        #8B5E3C;
-    --coffee:       #5C3D1E;
-    --espresso:     #3A2410;
-    --ink:          #2B1A0E;
-    --gold:         #C9973A;
-    --gold-light:   #E8C47A;
-    --shadow:       rgba(58,36,16,0.18);
-    --shadow-deep:  rgba(58,36,16,0.32);
+    --bg:         #F0E6D0;
+    --bg2:        #E8D9BF;
+    --cream:      #FBF4E6;
+    --cream2:     #F6EDD8;
+    --border:     #C8A97A;
+    --border2:    #B8936A;
+    --brown-dk:   #2C1A0E;
+    --brown-md:   #5C3317;
+    --brown-lt:   #8B5E3C;
+    --tan:        #C4A882;
+    --tan-lt:     #DFC9A8;
+    --gold:       #D4A96A;
+    --gold-lt:    #E8C98A;
+    --shadow:     rgba(44,26,14,0.18);
+    --shadow-dk:  rgba(44,26,14,0.35);
 }
 
-/* ── GLOBAL RESET ── */
+/* ─── GLOBAL ─────────────────────────────────────────────────────────────── */
 html, body, [class*="css"], .stApp {
-    background-color: var(--cream) !important;
-    font-family: 'EB Garamond', serif !important;
-    color: var(--ink) !important;
+    font-family: 'Crimson Text', Georgia, serif;
+    background-color: var(--bg);
+    color: var(--brown-dk);
 }
+.main .block-container {
+    padding: 0.6rem 1.8rem 2rem 1.8rem;
+    max-width: 100%;
+}
+#MainMenu, footer { visibility: hidden; }
+::-webkit-scrollbar            { width: 6px; height: 6px; }
+::-webkit-scrollbar-track      { background: var(--bg2); }
+::-webkit-scrollbar-thumb      { background: var(--brown-lt); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover{ background: var(--brown-md); }
 
-/* ── HIDE DEFAULT STREAMLIT CHROME ── */
-#MainMenu, footer, header { visibility: hidden; }
-.block-container { padding: 0 !important; max-width: 100% !important; }
-
-/* ── TOP HEADER BANNER ── */
-.top-banner {
-    background: linear-gradient(135deg, var(--espresso) 0%, var(--coffee) 45%, var(--brown) 100%);
-    padding: 18px 40px 14px 40px;
+/* ─── HEADER ──────────────────────────────────────────────────────────────── */
+.vhdr {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 3px solid var(--gold);
-    box-shadow: 0 4px 18px var(--shadow-deep);
+    padding: 1rem 2rem 0.9rem 2rem;
+    background: linear-gradient(120deg, #1E0F06 0%, #3B2210 30%, #5C3317 60%, #3B2210 85%, #1E0F06 100%);
+    border-radius: 14px;
+    margin-bottom: 0.2rem;
+    box-shadow: 0 6px 28px var(--shadow-dk), inset 0 1px 0 rgba(212,169,106,0.25);
+    border: 1px solid #6A3E20;
     position: relative;
+    overflow: hidden;
 }
-.top-banner::after {
+.vhdr::after {
     content: '';
-    position: absolute;
-    bottom: -7px; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, transparent, var(--gold-light), transparent);
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(60deg, transparent, transparent 18px,
+        rgba(212,169,106,0.04) 18px, rgba(212,169,106,0.04) 36px);
+    pointer-events: none;
 }
-.banner-left {
-    font-family: 'Crimson Pro', serif;
-    font-size: 0.82rem;
-    font-weight: 300;
-    color: var(--tan);
-    letter-spacing: 0.08em;
-    line-height: 1.5;
+.vhdr-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.88rem;
+    color: var(--gold);
+    letter-spacing: 0.07em;
+    line-height: 1.55;
+    font-style: italic;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    min-width: 185px;
 }
-.banner-left strong {
-    display: block;
-    font-size: 0.95rem;
-    font-weight: 500;
-    color: var(--gold-light);
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-}
-.banner-center {
+.vhdr-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.95rem;
+    font-weight: 700;
+    color: #F5E6C8;
+    letter-spacing: 0.25em;
     text-align: center;
+    text-shadow: 0 2px 8px rgba(0,0,0,0.55);
     flex: 1;
 }
-.banner-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 2.1rem;
-    font-weight: 700;
-    color: var(--cream);
-    letter-spacing: 0.05em;
-    line-height: 1;
-    text-shadow: 0 2px 8px var(--shadow-deep);
-}
-.banner-subtitle {
-    font-family: 'Crimson Pro', serif;
-    font-size: 0.78rem;
-    color: var(--gold-light);
-    letter-spacing: 0.25em;
-    text-transform: uppercase;
-    margin-top: 3px;
-}
-.banner-ornament {
-    color: var(--gold);
-    font-size: 1.2rem;
-    letter-spacing: 0.3em;
-    display: block;
-    margin-top: 2px;
-}
-.banner-right {
-    font-family: 'Crimson Pro', serif;
-    font-size: 0.78rem;
-    color: var(--tan);
+.vhdr-right {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.8rem;
+    color: #B8936A;
     text-align: right;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.05em;
+    line-height: 1.6;
+    min-width: 185px;
+}
+.ornament {
+    text-align: center;
+    color: #9B7245;
+    letter-spacing: 0.55em;
+    margin: 0.35rem 0 0.55rem 0;
+    font-size: 0.95rem;
+    user-select: none;
 }
 
-/* ── METHOD SELECTOR BAR ── */
-.selector-bar {
-    background: linear-gradient(90deg, var(--coffee) 0%, var(--espresso) 100%);
-    padding: 12px 40px;
-    border-bottom: 2px solid var(--caramel);
+/* ─── NAV STRIP ───────────────────────────────────────────────────────────── */
+.nav-strip {
+    background: linear-gradient(135deg, #EDE0C4 0%, #E2D0AA 50%, #EDE0C4 100%);
+    border: 1.5px solid var(--border);
+    border-radius: 11px;
+    padding: 0.6rem 1.3rem 0.45rem 1.3rem;
+    margin-bottom: 0.85rem;
+    box-shadow: 0 2px 12px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.45);
+}
+
+/* ─── SECTION TITLE ───────────────────────────────────────────────────────── */
+.stitle {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--brown-dk);
+    border-bottom: 2px solid var(--brown-lt);
+    padding-bottom: 0.28rem;
+    margin-bottom: 0.75rem;
+    letter-spacing: 0.04em;
+}
+.ssub {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1rem;
+    color: #6B4226;
+    font-style: italic;
+    margin-bottom: 0.85rem;
+}
+
+/* ─── PANEL CARDS ─────────────────────────────────────────────────────────── */
+.panel {
+    background: linear-gradient(160deg, var(--cream) 0%, var(--cream2) 100%);
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 1.1rem 1.25rem;
+    box-shadow: 3px 4px 18px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.55);
+    margin-bottom: 0.75rem;
+}
+.panel-dark {
+    background: linear-gradient(160deg, #EDE0C4 0%, #E5D4AE 100%);
+    border: 1.5px solid var(--border2);
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    box-shadow: 3px 4px 18px var(--shadow);
+    margin-bottom: 0.75rem;
+}
+.panel-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--brown-md);
+    letter-spacing: 0.04em;
+    margin-bottom: 0.5rem;
     display: flex;
     align-items: center;
-    gap: 30px;
-}
-.selector-label {
-    font-family: 'Crimson Pro', serif;
-    font-size: 0.78rem;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: var(--tan);
+    gap: 0.4rem;
 }
 
-/* ── MAIN CONTENT WRAPPER ── */
-.main-wrapper {
-    padding: 22px 30px 30px 30px;
-    background: var(--cream);
-}
-
-/* ── PANEL CARDS ── */
-.panel-card {
-    background: linear-gradient(160deg, #FDFAF3 0%, var(--parchment) 100%);
-    border: 1px solid var(--tan);
-    border-radius: 12px;
-    padding: 22px 20px;
-    box-shadow: 0 4px 16px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.6);
-    position: relative;
-}
-.panel-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, var(--brown), var(--gold), var(--brown));
-    border-radius: 12px 12px 0 0;
-}
-
-/* ── PANEL HEADINGS ── */
-.panel-heading {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.0rem;
-    font-weight: 600;
-    color: var(--coffee);
-    letter-spacing: 0.04em;
-    border-bottom: 1px solid var(--tan);
-    padding-bottom: 8px;
-    margin-bottom: 16px;
-}
-.panel-heading-sm {
-    font-family: 'Playfair Display', serif;
-    font-size: 0.88rem;
-    font-weight: 600;
-    color: var(--brown);
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    margin-bottom: 10px;
-}
-
-/* ── STREAMLIT WIDGET OVERRIDES ── */
-label, .stSelectbox label, .stNumberInput label, .stTextInput label, .stRadio label {
-    font-family: 'Crimson Pro', serif !important;
-    font-size: 0.85rem !important;
-    font-weight: 500 !important;
-    color: var(--coffee) !important;
-    letter-spacing: 0.04em !important;
-}
-.stTextInput > div > div > input,
-.stNumberInput > div > div > input,
-.stSelectbox > div > div {
-    background: #FBF7EE !important;
-    border: 1px solid var(--caramel) !important;
-    border-radius: 7px !important;
-    color: var(--ink) !important;
-    font-family: 'EB Garamond', serif !important;
-    font-size: 0.9rem !important;
-    box-shadow: inset 0 1px 4px rgba(139,94,60,0.10) !important;
-}
-.stTextInput > div > div > input:focus,
-.stNumberInput > div > div > input:focus {
-    border-color: var(--brown) !important;
-    box-shadow: 0 0 0 2px rgba(139,94,60,0.20) !important;
-}
-
-/* ── SOLVE BUTTON ── */
-.stButton > button {
-    width: 100% !important;
-    background: linear-gradient(135deg, var(--coffee) 0%, var(--brown) 100%) !important;
-    color: var(--cream) !important;
-    border: none !important;
-    border-radius: 8px !important;
+/* ─── WIDGET OVERRIDES ────────────────────────────────────────────────────── */
+div[data-testid="stRadio"] label > div p {
     font-family: 'Playfair Display', serif !important;
+    font-size: 0.97rem !important;
+    color: var(--brown-dk) !important;
+    font-weight: 600 !important;
+}
+.stSelectbox > label,
+.stNumberInput > label,
+.stTextInput > label {
+    font-family: 'Crimson Text', serif !important;
+    color: #4A2A12 !important;
     font-size: 0.95rem !important;
     font-weight: 600 !important;
-    letter-spacing: 0.08em !important;
-    padding: 0.55rem 1rem !important;
-    box-shadow: 0 3px 10px var(--shadow-deep) !important;
-    transition: all 0.25s ease !important;
-    border-top: 1px solid rgba(255,255,255,0.15) !important;
+    letter-spacing: 0.02em !important;
+}
+.stSelectbox [data-baseweb="select"] > div,
+.stTextInput input,
+.stNumberInput input {
+    border: 1.5px solid var(--border) !important;
+    border-radius: 7px !important;
+    background-color: var(--cream) !important;
+    color: var(--brown-dk) !important;
+    font-family: 'Crimson Text', serif !important;
+    font-size: 0.97rem !important;
+    box-shadow: inset 0 1px 5px rgba(59,31,12,0.07) !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
+}
+.stSelectbox [data-baseweb="select"] > div:focus-within,
+.stTextInput input:focus,
+.stNumberInput input:focus {
+    border-color: var(--brown-lt) !important;
+    box-shadow: 0 0 0 2.5px rgba(139,94,60,0.2) !important;
+}
+
+/* ─── BUTTON ──────────────────────────────────────────────────────────────── */
+.stButton > button {
+    width: 100%;
+    border-radius: 8px;
+    background: linear-gradient(135deg, var(--brown-md) 0%, var(--brown-lt) 55%, #7A4F2E 100%);
+    color: #F5E6C8;
+    font-family: 'Playfair Display', serif;
+    font-size: 0.97rem;
+    font-weight: 700;
+    border: 1px solid #9B7245;
+    letter-spacing: 0.09em;
+    padding: 0.55rem 1rem;
+    box-shadow: 0 3px 14px var(--shadow-dk), inset 0 1px 0 rgba(255,255,255,0.1);
+    transition: all 0.25s ease;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.35);
 }
 .stButton > button:hover {
-    background: linear-gradient(135deg, var(--brown) 0%, var(--caramel) 100%) !important;
-    box-shadow: 0 5px 18px var(--shadow-deep) !important;
-    transform: translateY(-1px) !important;
+    background: linear-gradient(135deg, #1E0F06 0%, var(--brown-md) 100%);
+    transform: translateY(-1.5px);
+    box-shadow: 0 5px 20px var(--shadow-dk);
+    color: var(--gold-lt);
+}
+.stButton > button:active { transform: translateY(0px); }
+
+/* ─── METRICS ─────────────────────────────────────────────────────────────── */
+[data-testid="metric-container"] {
+    background: linear-gradient(135deg, #EDE0C4, #E2CFA8) !important;
+    border: 1.5px solid var(--border) !important;
+    border-radius: 10px !important;
+    padding: 0.7rem 0.9rem !important;
+    box-shadow: 2px 3px 11px var(--shadow) !important;
+}
+[data-testid="stMetricLabel"] p {
+    font-family: 'Cormorant Garamond', serif !important;
+    color: #6B4226 !important;
+    font-size: 0.78rem !important;
+    letter-spacing: 0.08em !important;
+    text-transform: uppercase !important;
+}
+[data-testid="stMetricValue"] {
+    font-family: 'Playfair Display', serif !important;
+    color: var(--brown-dk) !important;
+    font-size: 1.45rem !important;
 }
 
-/* ── METRIC CARDS ── */
-.metric-row { display: flex; gap: 12px; margin-bottom: 16px; }
-.metric-box {
-    flex: 1;
-    background: linear-gradient(135deg, var(--coffee) 0%, var(--espresso) 100%);
-    border-radius: 10px;
-    padding: 12px 14px;
-    text-align: center;
-    box-shadow: 0 3px 10px var(--shadow-deep);
-    border: 1px solid var(--brown);
+/* ─── DATAFRAME ───────────────────────────────────────────────────────────── */
+[data-testid="stDataFrame"] {
+    border: 1.5px solid var(--border) !important;
+    border-radius: 9px !important;
+    overflow: hidden !important;
 }
-.metric-label {
-    font-family: 'Crimson Pro', serif;
-    font-size: 0.7rem;
-    color: var(--tan);
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    margin-bottom: 4px;
+[data-testid="stDataFrame"] table {
+    font-family: 'Crimson Text', serif !important;
 }
-.metric-value {
+[data-testid="stDataFrame"] th {
+    background-color: #5C3317 !important;
+    color: #F5E6C8 !important;
+    font-family: 'Playfair Display', serif !important;
+    font-size: 0.82rem !important;
+    letter-spacing: 0.05em !important;
+}
+[data-testid="stDataFrame"] tr:hover {
+    background-color: #EDE0C4 !important;
+}
+
+/* ─── INFO / SUCCESS ──────────────────────────────────────────────────────── */
+[data-testid="stInfo"] {
+    background-color: #EDE0C4 !important;
+    border-left: 4px solid var(--brown-lt) !important;
+    border-radius: 7px !important;
+    font-family: 'Crimson Text', serif !important;
+}
+[data-testid="stSuccess"] {
+    background-color: #E4D8C0 !important;
+    border-left: 4px solid var(--brown-md) !important;
+    border-radius: 7px !important;
+    font-family: 'Crimson Text', serif !important;
+}
+[data-testid="stAlert"] {
+    font-family: 'Crimson Text', serif !important;
+    border-radius: 7px !important;
+}
+
+/* ─── HR ──────────────────────────────────────────────────────────────────── */
+hr {
+    border: none !important;
+    border-top: 1.5px solid var(--border) !important;
+    margin: 0.6rem 0 !important;
+}
+
+/* ─── SIDEBAR ─────────────────────────────────────────────────────────────── */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #1E0F06 0%, #2C1A0E 40%, #3B2210 100%) !important;
+    border-right: 2px solid #5C3317 !important;
+}
+[data-testid="stSidebar"] * {
+    color: #E8D5B0 !important;
+}
+[data-testid="stSidebar"] .stButton > button {
+    background: linear-gradient(135deg, #3B2210, #5C3317) !important;
+    border-color: #7A4F2E !important;
+    color: #F5E6C8 !important;
+    font-size: 0.85rem !important;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+    background: linear-gradient(135deg, #5C3317, #8B5E3C) !important;
+}
+
+/* ─── HISTORY CARD INSIDE SIDEBAR ─────────────────────────────────────────── */
+.hist-card {
+    background: rgba(92,51,23,0.35);
+    border: 1px solid rgba(200,169,122,0.35);
+    border-radius: 9px;
+    padding: 0.7rem 0.85rem;
+    margin-bottom: 0.6rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    transition: background 0.2s;
+}
+.hist-card:hover { background: rgba(92,51,23,0.55); }
+.hist-method {
     font-family: 'Playfair Display', serif;
-    font-size: 1.25rem;
+    font-size: 0.82rem;
     font-weight: 700;
-    color: var(--gold-light);
-    letter-spacing: 0.02em;
+    color: #E8C98A;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.2rem;
 }
-
-/* ── ITERATION TABLE ── */
-.iter-table-wrapper {
-    overflow-y: auto;
-    max-height: 280px;
-    border-radius: 8px;
-    border: 1px solid var(--tan);
-}
-.iter-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: 'Crimson Pro', serif;
-    font-size: 0.82rem;
-}
-.iter-table thead tr {
-    background: linear-gradient(90deg, var(--coffee), var(--brown));
-    position: sticky;
-    top: 0;
-    z-index: 2;
-}
-.iter-table thead th {
-    padding: 9px 10px;
-    color: var(--cream);
-    font-weight: 500;
-    letter-spacing: 0.08em;
-    text-align: center;
-    border-right: 1px solid rgba(255,255,255,0.12);
-    font-size: 0.78rem;
-    text-transform: uppercase;
-}
-.iter-table tbody tr {
-    background: #FDFAF3;
-    transition: background 0.15s;
-}
-.iter-table tbody tr:nth-child(even) { background: var(--parchment); }
-.iter-table tbody tr:hover { background: #EDD9B8; }
-.iter-table tbody td {
-    padding: 7px 10px;
-    text-align: center;
-    border-right: 1px solid var(--tan);
-    border-bottom: 1px solid rgba(180,150,100,0.2);
-    color: var(--espresso);
-}
-
-/* ── HISTORY PANEL ── */
-.history-entry {
-    background: linear-gradient(135deg, #FBF7EE 0%, var(--parchment) 100%);
-    border: 1px solid var(--tan);
-    border-left: 4px solid var(--brown);
-    border-radius: 8px;
-    padding: 10px 14px;
-    margin-bottom: 10px;
-    font-family: 'Crimson Pro', serif;
-    font-size: 0.82rem;
-    color: var(--espresso);
-    box-shadow: 0 2px 6px var(--shadow);
-}
-.history-method {
-    font-family: 'Playfair Display', serif;
+.hist-eq {
+    font-family: 'Crimson Text', serif;
     font-size: 0.88rem;
-    font-weight: 600;
-    color: var(--coffee);
-    margin-bottom: 2px;
+    color: #D4BC96;
+    font-style: italic;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.15rem;
 }
-.history-meta {
-    color: var(--brown);
+.hist-ans {
+    font-family: 'Playfair Display', serif;
+    font-size: 0.9rem;
+    color: #F5E6C8;
+    font-weight: 600;
+}
+.hist-ts {
+    font-family: 'Cormorant Garamond', serif;
     font-size: 0.75rem;
+    color: #9B7A55;
+    margin-top: 0.2rem;
     letter-spacing: 0.04em;
 }
-
-/* ── SECTION DIVIDER ── */
-.ornament-divider {
+.hist-empty {
     text-align: center;
-    color: var(--caramel);
-    font-size: 0.9rem;
-    letter-spacing: 0.5em;
-    margin: 4px 0 12px 0;
-    opacity: 0.6;
+    padding: 1.5rem 0.5rem;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 0.95rem;
+    font-style: italic;
+    color: #7A5A3A;
 }
-
-/* ── RADIO BUTTONS ── */
-.stRadio > div { flex-direction: row !important; gap: 20px !important; flex-wrap: wrap !important; }
-.stRadio > div > label {
-    background: var(--parchment) !important;
-    border: 1px solid var(--caramel) !important;
-    border-radius: 20px !important;
-    padding: 5px 16px !important;
-    cursor: pointer !important;
-    transition: all 0.2s !important;
-}
-.stRadio > div > label:hover {
-    background: var(--tan) !important;
-    border-color: var(--brown) !important;
-}
-
-/* ── DATA EDITOR (MATRIX) ── */
-.stDataEditor { border: 1px solid var(--tan) !important; border-radius: 8px !important; }
-
-/* ── SCROLLBAR ── */
-::-webkit-scrollbar { width: 7px; height: 7px; }
-::-webkit-scrollbar-track { background: var(--parchment); border-radius: 4px; }
-::-webkit-scrollbar-thumb { background: var(--caramel); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--brown); }
-
-/* ── PLOTLY CHART ── */
-.js-plotly-plot .plotly { border-radius: 10px !important; }
-
-/* ── SECTION TABS (module selector) ── */
-.module-tab {
-    display: inline-block;
+.sidebar-hdr {
     font-family: 'Playfair Display', serif;
-    font-size: 0.88rem;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    padding: 7px 22px;
-    border-radius: 20px;
-    cursor: pointer;
-    border: 1px solid var(--caramel);
-    color: var(--tan);
-    background: transparent;
-    transition: all 0.2s;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #E8C98A;
+    letter-spacing: 0.1em;
+    text-align: center;
+    padding: 0.2rem 0 0.6rem 0;
+    border-bottom: 1px solid rgba(200,169,122,0.35);
+    margin-bottom: 0.7rem;
 }
-.module-tab.active {
-    background: var(--gold);
-    color: var(--espresso);
-    border-color: var(--gold);
-    box-shadow: 0 2px 8px var(--shadow);
+.sidebar-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 0.82rem;
+    color: #B8936A;
+    text-align: center;
+    margin-bottom: 0.25rem;
+    letter-spacing: 0.06em;
 }
 
-/* stSelectbox dropdown */
-.stSelectbox div[data-baseweb="select"] > div {
-    background: #FBF7EE !important;
-    border: 1px solid var(--caramel) !important;
-    border-radius: 7px !important;
+/* ─── PLACEHOLDER TEXT ───────────────────────────────────────────────────── */
+.placeholder-box {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: #9B7245;
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-style: italic;
+    line-height: 1.7;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ── SESSION STATE ──
-if "history" not in st.session_state:
-    st.session_state.history = []
 
-# ══════════════════════════════════════════════
-# TOP HEADER BANNER
-# ══════════════════════════════════════════════
-st.markdown("""
-<div class="top-banner">
-    <div class="banner-left">
-        <strong>DIOSAMABEL B. PENASO</strong>
-        BSCOMPE-2
-    </div>
-    <div class="banner-center">
-        <div class="banner-title">NUMERICAL PROJECT</div>
-        <div class="banner-subtitle">Computational Methods &amp; Analysis</div>
-        <span class="banner-ornament">✦ &nbsp; ✦ &nbsp; ✦</span>
-    </div>
-    <div class="banner-right">
-        Numerical Methods<br>Laboratory
-    </div>
-</div>
-""", unsafe_allow_html=True)
+# ══════════════════════════════════════════════════════════════════════════════
+#  SIDEBAR — SAVE HISTORY PANEL
+# ══════════════════════════════════════════════════════════════════════════════
+with st.sidebar:
+    st.markdown("""
+        <div style="padding-top:0.4rem;">
+            <div class="sidebar-name">DIOSAMABEL B. PENASO · BSCOMPE-2</div>
+            <div class="sidebar-hdr">✦ CALCULATION HISTORY ✦</div>
+        </div>
+    """, unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════
-# MODULE SELECTOR BAR
-# ══════════════════════════════════════════════
-st.markdown('<div style="height:10px"></div>', unsafe_allow_html=True)
-
-sel_col1, sel_col2, sel_col3 = st.columns([1, 2, 1])
-with sel_col2:
-    app_mode = st.radio(
-        "**Select Module**",
-        ["Root Finding Analysis", "Advanced Matrix Operations"],
-        horizontal=True,
-        label_visibility="collapsed"
-    )
-
-st.markdown('<div class="ornament-divider">— ✦ —</div>', unsafe_allow_html=True)
-
-# ══════════════════════════════════════════════
-# MODULE 1 — ROOT FINDING
-# ══════════════════════════════════════════════
-if app_mode == "Root Finding Analysis":
-
-    main_left, main_right = st.columns([1, 2.2], gap="medium")
-
-    # ── LEFT: INPUTS ──
-    with main_left:
-        st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-        st.markdown('<div class="panel-heading">⚙ Parameters &amp; Configuration</div>', unsafe_allow_html=True)
-
-        eq_str = st.text_input("Equation  f(x)", value="x**3 - x - 2",
-                               help="Use Python math syntax. E.g. x**2 - 4, sin(x) - x/2")
-
-        method = st.selectbox("Numerical Method", [
-            "Bisection Method",
-            "Regula-Falsi",
-            "Incremental Search",
-            "Newton-Raphson",
-            "Secant Method"
-        ])
-
-        st.markdown('<div class="ornament-divider" style="margin:8px 0">— ✦ —</div>', unsafe_allow_html=True)
-        st.markdown('<div class="panel-heading-sm">Boundary / Initial Values</div>', unsafe_allow_html=True)
-
-        if method in ["Bisection Method", "Regula-Falsi", "Incremental Search"]:
-            c1, c2 = st.columns(2)
-            with c1:
-                xl = st.number_input("Lower Bound (xₗ)", value=1.0, format="%.4f")
-            with c2:
-                xu = st.number_input("Upper Bound (xᵤ)", value=2.0, format="%.4f")
-        elif method == "Newton-Raphson":
-            x0 = st.number_input("Initial Guess (x₀)", value=1.0, format="%.4f")
-        elif method == "Secant Method":
-            c1, c2 = st.columns(2)
-            with c1:
-                x0 = st.number_input("First Guess (x₀)", value=1.0, format="%.4f")
-            with c2:
-                x1 = st.number_input("Second Guess (x₁)", value=2.0, format="%.4f")
-
-        st.markdown('<div class="ornament-divider" style="margin:8px 0">— ✦ —</div>', unsafe_allow_html=True)
-        st.markdown('<div class="panel-heading-sm">Stopping Criteria</div>', unsafe_allow_html=True)
-
-        c1, c2 = st.columns(2)
-        with c1:
-            tol = st.number_input("Tolerance (εₛ)", value=0.0001, format="%.6f")
-        with c2:
-            max_iter = st.number_input("Max Iterations", value=50, step=1, min_value=1)
-
-        st.markdown('<div style="height:10px"></div>', unsafe_allow_html=True)
-        solve_btn = st.button("▶  Calculate Root", use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-        # ── HISTORY PANEL (below inputs) ──
-        st.markdown('<div style="height:14px"></div>', unsafe_allow_html=True)
-        st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-        st.markdown('<div class="panel-heading">📜 Calculation History</div>', unsafe_allow_html=True)
-
-        if st.session_state.history:
-            hist_container = st.container()
-            with hist_container:
-                for entry in reversed(st.session_state.history[-8:]):
-                    st.markdown(f"""
-                    <div class="history-entry">
-                        <div class="history-method">{entry['method']}</div>
-                        <div>f(x) = <em>{entry['equation']}</em></div>
-                        <div>Root ≈ <strong>{entry['root']}</strong> &nbsp;|&nbsp; {entry['iters']} iters</div>
-                        <div class="history-meta">{entry['datetime']}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
-            if st.button("🗑  Clear History", use_container_width=True):
+    if st.session_state.history:
+        clear_col, _ = st.columns([1, 0.01])
+        with clear_col:
+            if st.button("🗑  Clear History"):
                 st.session_state.history = []
                 st.rerun()
-        else:
-            st.markdown("""
-            <div style="text-align:center; padding:20px; color:#8B7355;
-                font-family:'Crimson Pro',serif; font-style:italic; font-size:0.9rem;">
-                No calculations yet.<br>Results will appear here automatically.
-            </div>
+
+        st.markdown("<div style='margin-top:0.5rem;'>", unsafe_allow_html=True)
+        # Render newest first
+        for entry in reversed(st.session_state.history):
+            st.markdown(f"""
+                <div class="hist-card">
+                    <div class="hist-method">{entry['type']} · {entry['method']}</div>
+                    <div class="hist-eq">{entry['equation']}</div>
+                    <div class="hist-ans">⟶ {entry['answer']}</div>
+                    <div class="hist-ts">🕐 {entry['timestamp']}</div>
+                </div>
             """, unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+    else:
+        st.markdown("""
+            <div class="hist-empty">
+                ✦ No calculations yet.<br>Results will appear here after solving.
+            </div>
+        """, unsafe_allow_html=True)
 
-    # ── RIGHT: RESULTS ──
-    with main_right:
 
+# ══════════════════════════════════════════════════════════════════════════════
+#  TOP HEADER
+# ══════════════════════════════════════════════════════════════════════════════
+st.markdown("""
+    <div class="vhdr">
+        <div class="vhdr-name">DIOSAMABEL B. PENASO<br>BSCOMPE-2</div>
+        <div class="vhdr-title">✦ &nbsp; NUMERICAL PROJECT &nbsp; ✦</div>
+        <div class="vhdr-right">Numerical Methods<br>Analysis Suite</div>
+    </div>
+    <div class="ornament">— ✦ ◆ ✦ —</div>
+""", unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  TOP NAVIGATION STRIP
+# ══════════════════════════════════════════════════════════════════════════════
+st.markdown('<div class="nav-strip">', unsafe_allow_html=True)
+app_mode = st.radio(
+    "**Select Module**",
+    ["Root Finding Analysis", "Advanced Matrix Operations"],
+    horizontal=True,
+    label_visibility="visible"
+)
+st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  MODULE 1 — ROOT FINDING ANALYSIS
+# ══════════════════════════════════════════════════════════════════════════════
+if app_mode == "Root Finding Analysis":
+    st.markdown('<div class="stitle">⚙ Root Finding Analysis</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ssub">Select a numerical method, configure parameters, and instantly view the iteration table and graph.</div>', unsafe_allow_html=True)
+
+    # ── THREE-COLUMN DASHBOARD LAYOUT ──
+    col_left, col_right = st.columns([1, 2.35])
+
+    # ────────────────── LEFT — INPUTS ──────────────────
+    with col_left:
+        st.markdown('<div class="panel">', unsafe_allow_html=True)
+        st.markdown('<div class="panel-title">⚙ Parameters</div>', unsafe_allow_html=True)
+
+        eq_str   = st.text_input("Equation  f(x)", value="x**3 - x - 2",
+                                 help="Use Python syntax: x**2, sin(x), exp(x), log(x)")
+        method   = st.selectbox("Algorithm", [
+            "Incremental Search",
+            "Bisection Method",
+            "Regula-Falsi",
+            "Newton-Raphson",
+            "Secant Method",
+        ])
+
+        if method in ["Bisection Method", "Regula-Falsi", "Incremental Search"]:
+            xl = st.number_input("Lower Bound  (xl)", value=1.0, format="%.4f")
+            xu = st.number_input("Upper Bound  (xu)", value=2.0, format="%.4f")
+        elif method == "Newton-Raphson":
+            x0 = st.number_input("Initial Guess  (x0)", value=1.0, format="%.4f")
+        elif method == "Secant Method":
+            x0 = st.number_input("First Guess   (x0)", value=1.0, format="%.4f")
+            x1 = st.number_input("Second Guess  (x1)", value=2.0, format="%.4f")
+
+        c_tol, c_iter = st.columns(2)
+        tol      = c_tol.number_input("Tolerance",      value=0.0001, format="%.6f")
+        max_iter = c_iter.number_input("Max Iterations", value=50, step=1)
+
+        st.markdown("<div style='margin-top:0.6rem;'>", unsafe_allow_html=True)
+        solve_btn = st.button("⟳  Calculate Root", use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)   # /panel
+
+    # ────────────────── RIGHT — TABLE + GRAPH ──────────────────
+    with col_right:
+
+        # ── COMPUTE ON BUTTON PRESS ──
         if solve_btn:
             try:
-                x_sym = sp.Symbol('x')
+                xs   = sp.Symbol('x')
                 expr = sp.sympify(eq_str)
-                f = sp.lambdify(x_sym, expr, 'numpy')
-                df_func = sp.lambdify(x_sym, sp.diff(expr, x_sym), 'numpy')
+                f    = sp.lambdify(xs, expr, 'numpy')
+                dfdx = sp.lambdify(xs, sp.diff(expr, xs), 'numpy')
 
-                results, root, iterations, final_err = [], None, 0, 0.0
+                results, root, iterations, final_err = [], None, 0, 0
 
-                # ── ALGORITHMS ──
                 if method == "Bisection Method":
-                    xl_cur, xu_cur = xl, xu
+                    _xl, _xu = xl, xu
                     for i in range(int(max_iter)):
-                        xr = (xl_cur + xu_cur) / 2
-                        err = abs(xu_cur - xl_cur) / 2 if i > 0 else None
-                        results.append({
-                            "Iter": i+1,
-                            "xₗ": round(xl_cur, 6),
-                            "xᵤ": round(xu_cur, 6),
-                            "xᵣ": round(xr, 6),
-                            "f(xₗ)": round(float(f(xl_cur)), 6),
-                            "f(xᵣ)": round(float(f(xr)), 6),
-                            "Error": round(err, 8) if err else "—",
-                            "Subinterval": "1st" if f(xl_cur)*f(xr) < 0 else "2nd"
-                        })
-                        if f(xr) == 0 or (err is not None and err < tol):
-                            root, iterations, final_err = xr, i+1, (err or 0)
-                            break
-                        if f(xl_cur) * f(xr) < 0:
-                            xu_cur = xr
-                        else:
-                            xl_cur = xr
-                        if i == int(max_iter)-1:
-                            root, iterations, final_err = xr, i+1, (err or 0)
+                        xr  = (_xl + _xu) / 2
+                        err = abs(_xu - _xl) / 2
+                        results.append({"Iter": i+1, "xl": round(_xl,7), "xu": round(_xu,7),
+                                         "xr": round(xr,7), "f(xr)": round(float(f(xr)),7), "Error": round(err,8)})
+                        if f(xr) == 0 or err < tol:
+                            root, iterations, final_err = xr, i+1, err; break
+                        if f(_xl) * f(xr) < 0: _xu = xr
+                        else: _xl = xr
 
                 elif method == "Regula-Falsi":
-                    xl_cur, xu_cur = xl, xu
-                    xr_old = None
+                    _xl, _xu = xl, xu
                     for i in range(int(max_iter)):
-                        denom = f(xl_cur) - f(xu_cur)
-                        if denom == 0: break
-                        xr = xu_cur - (f(xu_cur)*(xl_cur - xu_cur)) / denom
-                        err = abs((xr - xr_old)/xr * 100) if xr_old and xr != 0 else None
-                        results.append({
-                            "Iter": i+1,
-                            "xₗ": round(xl_cur, 6),
-                            "xᵤ": round(xu_cur, 6),
-                            "xᵣ": round(xr, 6),
-                            "f(xₗ)": round(float(f(xl_cur)), 6),
-                            "f(xᵤ)": round(float(f(xu_cur)), 6),
-                            "f(xᵣ)": round(float(f(xr)), 6),
-                            "εₐ %": round(err, 6) if err else "—",
-                            "f(xₗ)·f(xᵣ)": "<0" if float(f(xl_cur))*float(f(xr)) < 0 else ">0"
-                        })
-                        if err is not None and abs(err) < tol * 100:
-                            root, iterations, final_err = xr, i+1, (err or 0)
-                            break
-                        if float(f(xl_cur)) * float(f(xr)) < 0:
-                            xu_cur = xr
-                        else:
-                            xl_cur = xr
-                        xr_old = xr
-                        if i == int(max_iter)-1:
-                            root, iterations, final_err = xr, i+1, (err or 0)
+                        xr  = _xu - (f(_xu) * (_xl - _xu)) / (f(_xl) - f(_xu))
+                        err = abs(f(xr))
+                        results.append({"Iter": i+1, "xl": round(_xl,7), "xu": round(_xu,7),
+                                         "xr": round(xr,7), "f(xr)": round(float(f(xr)),7), "Error": round(err,8)})
+                        if err < tol:
+                            root, iterations, final_err = xr, i+1, err; break
+                        if f(_xl) * f(xr) < 0: _xu = xr
+                        else: _xl = xr
 
                 elif method == "Newton-Raphson":
                     xr = x0
                     for i in range(int(max_iter)):
-                        fxr = float(f(xr))
-                        dfxr = float(df_func(xr))
-                        if dfxr == 0: break
-                        xr_new = xr - fxr/dfxr
-                        err = abs((xr_new - xr)/xr_new * 100) if xr_new != 0 else abs(xr_new - xr)
-                        results.append({
-                            "Iter": i+1,
-                            "xᵢ": round(xr, 6),
-                            "f(xᵢ)": round(fxr, 6),
-                            "f′(xᵢ)": round(dfxr, 6),
-                            "xᵢ₊₁": round(xr_new, 6),
-                            "εₐ": round(err, 6)
-                        })
+                        fxr, dfxr = f(xr), dfdx(xr)
+                        xr_new = xr - fxr / dfxr
+                        err = abs(xr_new - xr)
+                        results.append({"Iter": i+1, "xi": round(xr,7),
+                                         "f(xi)": round(float(fxr),7), "f'(xi)": round(float(dfxr),7),
+                                         "xi+1": round(xr_new,7), "Error": round(err,8)})
                         xr = xr_new
-                        if err < tol * 100:
-                            root, iterations, final_err = xr, i+1, err
-                            break
-                        if i == int(max_iter)-1:
-                            root, iterations, final_err = xr, i+1, err
+                        if err < tol:
+                            root, iterations, final_err = xr, i+1, err; break
 
                 elif method == "Secant Method":
-                    x0_c, x1_c = x0, x1
+                    _x0, _x1 = x0, x1
                     for i in range(int(max_iter)):
-                        fx1, fx0 = float(f(x1_c)), float(f(x0_c))
-                        denom = fx0 - fx1
-                        if denom == 0: break
-                        x2 = x1_c - (fx1 * (x0_c - x1_c)) / denom
-                        err = abs((x2 - x1_c)/x2 * 100) if x2 != 0 else abs(x2 - x1_c)
-                        results.append({
-                            "Iter": i+1,
-                            "x(i-1)": round(x0_c, 6),
-                            "x(i)": round(x1_c, 6),
-                            "x(i+1)": round(x2, 6),
-                            "f(x(i+1))": round(float(f(x2)), 6),
-                            "εₐ": round(err, 6)
-                        })
-                        x0_c, x1_c = x1_c, x2
-                        if err < tol * 100:
-                            root, iterations, final_err = x2, i+1, err
-                            break
-                        if i == int(max_iter)-1:
-                            root, iterations, final_err = x2, i+1, err
+                        fx1_, fx0_ = f(_x1), f(_x0)
+                        x2  = _x1 - (fx1_ * (_x0 - _x1)) / (fx0_ - fx1_)
+                        err = abs(x2 - _x1)
+                        results.append({"Iter": i+1, "x(i-1)": round(_x0,7), "x(i)": round(_x1,7),
+                                         "x(i+1)": round(x2,7), "f(x(i+1))": round(float(f(x2)),7), "Error": round(err,8)})
+                        _x0, _x1 = _x1, x2
+                        if err < tol:
+                            root, iterations, final_err = x2, i+1, err; break
 
                 elif method == "Incremental Search":
                     step, curr_x = 0.1, xl
-                    xr_old = None
-                    i = 0
-                    while i < int(max_iter):
+                    for i in range(int(max_iter)):
                         next_x = curr_x + step
-                        fc = float(f(curr_x))
-                        fn = float(f(next_x))
-                        err = None
-                        if xr_old is not None and curr_x != 0:
-                            err = abs((curr_x - xr_old)/curr_x * 100)
-                        results.append({
-                            "Iter": i+1,
-                            "xₗ": round(curr_x, 6),
-                            "Δx": round(step, 6),
-                            "xᵤ": round(next_x, 6),
-                            "f(xₗ)": round(fc, 6),
-                            "f(xᵤ)": round(fn, 6),
-                            "f(xₗ)·f(xᵤ)": round(fc*fn, 8),
-                            "Remark": "Sign Change — Revert" if fc*fn < 0 else "Go to next interval"
-                        })
-                        if fc * fn < 0:
-                            root_cand = (curr_x + next_x)/2
-                            if err is not None and abs(err) < tol * 100:
-                                root, iterations, final_err = root_cand, i+1, (err or 0)
-                                break
-                            xr_old = curr_x
-                            step /= 10
-                        else:
-                            xr_old = curr_x
-                            curr_x = next_x
-                        i += 1
-                        if root is None and i == int(max_iter):
-                            root = (curr_x + next_x)/2
-                            iterations = i
-                            final_err = 0
+                        results.append({"Iter": i+1, "x": round(curr_x,7), "f(x)": round(float(f(curr_x)),7)})
+                        if f(curr_x) * f(next_x) < 0:
+                            root, iterations, final_err = (curr_x + next_x) / 2, i+2, 0; break
+                        curr_x = next_x
 
                 if root is not None:
-                    # Save to history
-                    st.session_state.history.append({
-                        "method": method,
-                        "equation": eq_str,
-                        "root": f"{root:.6f}",
-                        "iters": iterations,
-                        "datetime": datetime.now().strftime("%b %d, %Y  %H:%M")
-                    })
-
-                    # ── METRIC CARDS ──
-                    st.markdown(f"""
-                    <div class="metric-row">
-                        <div class="metric-box">
-                            <div class="metric-label">Calculated Root</div>
-                            <div class="metric-value">{root:.6f}</div>
-                        </div>
-                        <div class="metric-box">
-                            <div class="metric-label">Total Iterations</div>
-                            <div class="metric-value">{iterations}</div>
-                        </div>
-                        <div class="metric-box">
-                            <div class="metric-label">Final Error</div>
-                            <div class="metric-value">{f"{final_err:.6f}" if final_err else "—"}</div>
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
-
-                    # ── ITERATION TABLE ──
-                    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-                    st.markdown(f'<div class="panel-heading">📊 Iteration Table — {method}</div>', unsafe_allow_html=True)
-
-                    df_results = pd.DataFrame(results)
-                    cols = list(df_results.columns)
-
-                    # Build HTML table
-                    thead = "".join([f"<th>{c}</th>" for c in cols])
-                    tbody_rows = ""
-                    for _, row in df_results.iterrows():
-                        tds = ""
-                        for c in cols:
-                            val = row[c]
-                            tds += f"<td>{val}</td>"
-                        tbody_rows += f"<tr>{tds}</tr>"
-
-                    table_html = f"""
-                    <div class="iter-table-wrapper">
-                        <table class="iter-table">
-                            <thead><tr>{thead}</tr></thead>
-                            <tbody>{tbody_rows}</tbody>
-                        </table>
-                    </div>
-                    """
-                    st.markdown(table_html, unsafe_allow_html=True)
-                    st.markdown('</div>', unsafe_allow_html=True)
-
-                    st.markdown('<div style="height:14px"></div>', unsafe_allow_html=True)
-
-                    # ── GRAPH ──
-                    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-                    st.markdown('<div class="panel-heading">📈 Function Graph</div>', unsafe_allow_html=True)
-
-                    span = max(3, abs(root) * 1.5)
-                    x_vals = np.linspace(root - span, root + span, 400)
-                    try:
-                        y_vals = f(x_vals)
-                        y_vals = np.where(np.abs(y_vals) > 1e6, np.nan, y_vals)
-                    except:
-                        y_vals = np.zeros_like(x_vals)
-
+                    # Build Plotly figure with vintage palette
+                    x_vals = np.linspace(root - 3, root + 3, 500)
+                    y_vals = f(x_vals)
                     fig = go.Figure()
                     fig.add_trace(go.Scatter(
                         x=x_vals, y=y_vals, mode='lines', name='f(x)',
-                        line=dict(color='#8B5E3C', width=2.5)
+                        line=dict(color='#5C3317', width=2.5)
                     ))
-                    fig.add_hline(y=0, line_dash="dash", line_color="#5C3D1E", line_width=1)
-                    fig.add_vline(x=0, line_dash="dash", line_color="#5C3D1E", line_width=1)
+                    fig.add_hline(y=0, line_dash="dash", line_color="#9B7245", line_width=1.3)
+                    fig.add_vline(x=0, line_dash="dash", line_color="#9B7245", line_width=1.3)
                     fig.add_trace(go.Scatter(
-                        x=[root], y=[0], mode='markers', name=f'Root ≈ {root:.5f}',
-                        marker=dict(color='#C9973A', size=14, symbol='x',
-                                    line=dict(width=3, color='#3A2410'))
+                        x=[root], y=[0], mode='markers', name=f'Root ≈ {root:.6f}',
+                        marker=dict(color='#8B1A1A', size=13, symbol='x', line=dict(width=3))
                     ))
                     fig.update_layout(
-                        paper_bgcolor='rgba(253,250,243,0)',
-                        plot_bgcolor='rgba(253,250,243,0.6)',
-                        font=dict(family='EB Garamond', color='#3A2410', size=12),
-                        margin=dict(l=10, r=10, t=30, b=10),
-                        height=320,
-                        legend=dict(
-                            bgcolor='rgba(237,227,200,0.85)',
-                            bordercolor='#B8936A', borderwidth=1,
-                            font=dict(family='Crimson Pro', size=12)
-                        ),
-                        xaxis=dict(
-                            gridcolor='rgba(180,150,100,0.25)',
-                            zeroline=False,
-                            title='x',
-                            titlefont=dict(family='Playfair Display', size=12)
-                        ),
-                        yaxis=dict(
-                            gridcolor='rgba(180,150,100,0.25)',
-                            zeroline=False,
-                            title='f(x)',
-                            titlefont=dict(family='Playfair Display', size=12)
-                        ),
-                        hovermode="x unified"
+                        title=dict(text=f"f(x) = {eq_str}", font=dict(family="Playfair Display,serif", size=14, color="#2C1A0E")),
+                        xaxis_title="x",  yaxis_title="f(x)",
+                        hovermode="x unified",
+                        plot_bgcolor='#FBF4E6', paper_bgcolor='#FBF4E6',
+                        font=dict(family="Crimson Text,serif", color="#2C1A0E"),
+                        xaxis=dict(gridcolor='#E2CFA8', linecolor='#C4A882', zerolinecolor='#C4A882', tickfont=dict(family="Crimson Text,serif")),
+                        yaxis=dict(gridcolor='#E2CFA8', linecolor='#C4A882', zerolinecolor='#C4A882', tickfont=dict(family="Crimson Text,serif")),
+                        legend=dict(bgcolor='#EDE0C4', bordercolor='#C4A882', borderwidth=1, font=dict(family="Crimson Text,serif")),
+                        margin=dict(l=8, r=8, t=38, b=8),
+                        height=310,
                     )
-                    st.plotly_chart(fig, use_container_width=True)
-                    st.markdown('</div>', unsafe_allow_html=True)
 
+                    # Persist to session state
+                    st.session_state.rf_results    = results
+                    st.session_state.rf_root       = root
+                    st.session_state.rf_iterations = iterations
+                    st.session_state.rf_error      = final_err
+                    st.session_state.rf_fig        = fig
+                    st.session_state.rf_eq         = eq_str
+                    st.session_state.rf_method     = method
+
+                    # Save to history
+                    st.session_state.history.append({
+                        "type":      "Root Finding",
+                        "method":    method,
+                        "equation":  f"f(x) = {eq_str}",
+                        "answer":    f"x ≈ {root:.8f}  ({iterations} iters)",
+                        "timestamp": datetime.now().strftime("%b %d, %Y  %H:%M:%S"),
+                    })
+                    st.toast("Calculation complete!", icon="✅")
                 else:
-                    st.warning("No root found within the given parameters. Adjust your bounds or initial guess.")
+                    st.warning("No root found within the specified bounds or iterations.")
 
             except Exception as e:
-                st.error(f"Error: {e}")
+                st.error(f"Error: Ensure the equation uses valid Python math (e.g., ** for exponents). → {e}")
+
+        # ── DISPLAY PERSISTED RESULTS ──
+        if st.session_state.rf_root is not None:
+            # METRICS ROW
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Calculated Root",  f"{st.session_state.rf_root:.8f}")
+            m2.metric("Total Iterations", st.session_state.rf_iterations)
+            m3.metric("Final Error",
+                      f"{st.session_state.rf_error:.3e}" if st.session_state.rf_error else "—")
+
+            # UPPER RIGHT — ITERATION TABLE
+            st.markdown('<div class="panel" style="margin-top:0.7rem;">', unsafe_allow_html=True)
+            st.markdown('<div class="panel-title">📊 Iteration Table</div>', unsafe_allow_html=True)
+            df_results = pd.DataFrame(st.session_state.rf_results)
+            st.dataframe(df_results, use_container_width=True, height=220)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            # LOWER RIGHT — GRAPH
+            st.markdown('<div class="panel">', unsafe_allow_html=True)
+            st.markdown('<div class="panel-title">📈 Function Graph</div>', unsafe_allow_html=True)
+            st.plotly_chart(st.session_state.rf_fig, use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
         else:
-            # Placeholder when nothing is solved yet
             st.markdown("""
-            <div style="display:flex; flex-direction:column; align-items:center; justify-content:center;
-                height:460px; background:linear-gradient(160deg,#FDFAF3,#EDE3C8);
-                border:1px solid #D4B896; border-radius:12px; text-align:center;
-                box-shadow:0 4px 16px rgba(58,36,16,0.12);">
-                <div style="font-size:3rem; margin-bottom:16px; opacity:0.4;">📐</div>
-                <div style="font-family:'Playfair Display',serif; font-size:1.3rem;
-                    color:#5C3D1E; font-weight:600; margin-bottom:8px;">
-                    Awaiting Computation
+                <div class="panel" style="min-height:520px;">
+                    <div class="placeholder-box">
+                        ✦ Configure the parameters on the left<br>
+                        and press <em>Calculate Root</em> to begin.<br><br>
+                        The iteration table and graph will<br>
+                        appear here immediately upon solving.
+                    </div>
                 </div>
-                <div style="font-family:'Crimson Pro',serif; font-size:0.92rem;
-                    color:#8B7355; max-width:300px; line-height:1.6; font-style:italic;">
-                    Configure your parameters on the left and press<br>
-                    <em>Calculate Root</em> to begin the analysis.
-                </div>
-                <div style="margin-top:20px; color:#B8936A; font-size:0.85rem;
-                    letter-spacing:0.3em; font-family:'Crimson Pro',serif;">
-                    ✦ &nbsp; ✦ &nbsp; ✦
-                </div>
-            </div>
             """, unsafe_allow_html=True)
 
-# ══════════════════════════════════════════════
-# MODULE 2 — MATRIX OPERATIONS
-# ══════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  MODULE 2 — ADVANCED MATRIX OPERATIONS
+# ══════════════════════════════════════════════════════════════════════════════
 elif app_mode == "Advanced Matrix Operations":
+    st.markdown('<div class="stitle">⊞ Advanced Matrix Operations</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ssub">Input matrices using the interactive spreadsheets and execute linear algebra operations instantly.</div>', unsafe_allow_html=True)
 
-    st.markdown('<div style="padding:0 4px">', unsafe_allow_html=True)
+    col_left, col_right = st.columns([1, 2.0])
 
-    # Operation selector
-    op_col1, op_col2, op_col3 = st.columns([1, 2, 1])
-    with op_col2:
-        op = st.selectbox("**Select Matrix Operation**", [
+    # ────────────────── LEFT — INPUTS ──────────────────
+    with col_left:
+        st.markdown('<div class="panel">', unsafe_allow_html=True)
+        st.markdown('<div class="panel-title">⊞ Configuration</div>', unsafe_allow_html=True)
+
+        op = st.selectbox("Select Operation", [
             "Addition", "Multiplication",
             "System of Equations (Ax = B)",
             "Adjoint", "Inverse", "Determinant",
-            "Power of Matrix", "Transpose"
+            "Power of Matrix", "Transpose",
         ])
 
-    st.markdown('<div style="height:10px"></div>', unsafe_allow_html=True)
-
-    # ── MATRIX INPUT PANELS ──
-    if op in ["Addition", "Multiplication", "System of Equations (Ax = B)"]:
-        mat_col1, mat_col2 = st.columns(2, gap="medium")
-    else:
-        mat_col1, mat_col2 = st.columns([1, 1], gap="medium")
-
-    with mat_col1:
-        st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-        st.markdown('<div class="panel-heading">Matrix A</div>', unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        rows_A = c1.number_input("Rows", 1, 10, 3, key="rA")
-        cols_A = c2.number_input("Cols", 1, 10, 3, key="cA")
-        df_A = pd.DataFrame(np.zeros((int(rows_A), int(cols_A))),
-                            columns=[f"C{i+1}" for i in range(int(cols_A))])
+        st.markdown("<hr>", unsafe_allow_html=True)
+        st.markdown("**Matrix A**")
+        ca1, ca2 = st.columns(2)
+        rows_A = ca1.number_input("Rows", 1, 10, 3, key="ra")
+        cols_A = ca2.number_input("Cols", 1, 10, 3, key="ca")
+        df_A     = pd.DataFrame(np.zeros((rows_A, cols_A)), columns=[f"C{i+1}" for i in range(cols_A)])
         edited_A = st.data_editor(df_A, use_container_width=True, key="matrix_a")
-        A = edited_A.to_numpy()
-        st.markdown('</div>', unsafe_allow_html=True)
+        A        = edited_A.to_numpy()
 
-    if op in ["Addition", "Multiplication", "System of Equations (Ax = B)"]:
-        with mat_col2:
-            st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-            st.markdown('<div class="panel-heading">Matrix B</div>', unsafe_allow_html=True)
+        needs_B = op in ["Addition", "Multiplication", "System of Equations (Ax = B)"]
+        if needs_B:
+            st.markdown("<hr>", unsafe_allow_html=True)
+            st.markdown("**Matrix B**")
             if op == "System of Equations (Ax = B)":
-                st.info("B must be a single-column results vector.")
-                rows_B, cols_B = int(rows_A), 1
+                st.info("Matrix B: single column vector (same rows as A).")
+                rows_B, cols_B = rows_A, 1
             elif op == "Addition":
-                rows_B, cols_B = int(rows_A), int(cols_A)
+                rows_B, cols_B = rows_A, cols_A
             else:
-                c1, c2 = st.columns(2)
-                rows_B = int(cols_A)
-                cols_B = c2.number_input("Cols B", 1, 10, 3, key="cB")
-            df_B = pd.DataFrame(np.zeros((rows_B, cols_B)),
-                                columns=[f"C{i+1}" for i in range(cols_B)])
+                cb1, cb2 = st.columns(2)
+                rows_B = cb1.number_input("Rows", 1, 10, int(cols_A), key="rb", disabled=True)
+                cols_B = cb2.number_input("Cols", 1, 10, 3, key="cb")
+            df_B     = pd.DataFrame(np.zeros((rows_B, cols_B)), columns=[f"C{i+1}" for i in range(cols_B)])
             edited_B = st.data_editor(df_B, use_container_width=True, key="matrix_b")
-            B = edited_B.to_numpy()
+            B        = edited_B.to_numpy()
+
+        if op == "Power of Matrix":
+            st.markdown("<hr>", unsafe_allow_html=True)
+            power = st.number_input("Exponent  n", value=2, step=1)
+
+        st.markdown("<div style='margin-top:0.7rem;'>", unsafe_allow_html=True)
+        exec_btn = st.button("⊞  Execute Matrix Operation", use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)   # /panel
+
+    # ────────────────── RIGHT — RESULT ──────────────────
+    with col_right:
+        if exec_btn:
+            try:
+                with st.spinner("Processing..."):
+                    time.sleep(0.35)
+
+                result     = None
+                ans_str    = ""
+                if op == "Addition":
+                    result  = A + B;  ans_str = "Matrix addition complete."
+                elif op == "Multiplication":
+                    result  = np.matmul(A, B);  ans_str = "Matrix product computed."
+                elif op == "Transpose":
+                    result  = A.T;  ans_str = "Matrix transposed."
+                elif op == "Determinant":
+                    det_val = np.linalg.det(A);  ans_str = f"det(A) = {det_val:.6f}"
+                elif op == "Inverse":
+                    result  = np.linalg.inv(A);  ans_str = "Inverse computed."
+                elif op == "Adjoint":
+                    result  = np.round(np.linalg.inv(A) * np.linalg.det(A), 6)
+                    ans_str = "Adjoint computed."
+                elif op == "Power of Matrix":
+                    result  = np.linalg.matrix_power(A, int(power))
+                    ans_str = f"A^{int(power)} computed."
+                elif op == "System of Equations (Ax = B)":
+                    result  = np.linalg.solve(A, B);  ans_str = "System solved for X."
+
+                # Persist
+                st.session_state.mx_result = {"op": op, "result": result,
+                                               "det_val": det_val if op == "Determinant" else None,
+                                               "ans_str": ans_str}
+                st.session_state.mx_op = op
+
+                # History
+                st.session_state.history.append({
+                    "type":      "Matrix Operation",
+                    "method":    op,
+                    "equation":  f"{rows_A}×{cols_A} matrix",
+                    "answer":    ans_str,
+                    "timestamp": datetime.now().strftime("%b %d, %Y  %H:%M:%S"),
+                })
+                st.toast("Operation successful!", icon="✅")
+
+            except np.linalg.LinAlgError as e:
+                st.error(f"Mathematical Error: {e}  (Matrix may be singular / non-invertible.)")
+            except ValueError as e:
+                st.error(f"Dimension Mismatch: {e}")
+
+        # ── DISPLAY PERSISTED MATRIX RESULT ──
+        if st.session_state.mx_result:
+            r = st.session_state.mx_result
+            st.markdown('<div class="panel">', unsafe_allow_html=True)
+            st.markdown(f'<div class="panel-title">⊞ Result — {r["op"]}</div>', unsafe_allow_html=True)
+
+            if r["op"] == "Determinant":
+                st.metric("Determinant Value", f'{r["det_val"]:.6f}')
+            else:
+                if r["op"] == "System of Equations (Ax = B)":
+                    st.success("✦  Solutions found for Vector X:")
+                if r["result"] is not None:
+                    st.dataframe(
+                        pd.DataFrame(r["result"]).style.format("{:.6g}"),
+                        use_container_width=True,
+                        height=420,
+                    )
             st.markdown('</div>', unsafe_allow_html=True)
-
-    if op == "Power of Matrix":
-        with mat_col2:
-            st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-            st.markdown('<div class="panel-heading">Settings</div>', unsafe_allow_html=True)
-            power = st.number_input("Power (n)", value=2, step=1)
-            st.markdown('</div>', unsafe_allow_html=True)
-
-    st.markdown('<div style="height:12px"></div>', unsafe_allow_html=True)
-
-    btn_c1, btn_c2, btn_c3 = st.columns([1, 2, 1])
-    with btn_c2:
-        exec_btn = st.button("▶  Execute Matrix Operation", use_container_width=True)
-
-    if exec_btn:
-        try:
-            with st.spinner("Computing..."):
-                time.sleep(0.3)
-
-            result = None
-            res_label = "Result"
-
-            if op == "Addition":
-                result = A + B
-            elif op == "Multiplication":
-                result = np.matmul(A, B)
-            elif op == "Transpose":
-                result = A.T
-            elif op == "Determinant":
-                det_val = np.linalg.det(A)
-                st.markdown(f"""
-                <div class="metric-row" style="justify-content:center">
-                    <div class="metric-box" style="max-width:280px">
-                        <div class="metric-label">Determinant Value</div>
-                        <div class="metric-value">{det_val:.6f}</div>
+        else:
+            st.markdown("""
+                <div class="panel" style="min-height:460px;">
+                    <div class="placeholder-box">
+                        ✦ Enter your matrix values on the left<br>
+                        and press <em>Execute Matrix Operation</em>.<br><br>
+                        The result will appear here immediately.
                     </div>
                 </div>
-                """, unsafe_allow_html=True)
-            elif op == "Inverse":
-                result = np.linalg.inv(A)
-            elif op == "Adjoint":
-                result = np.round(np.linalg.inv(A) * np.linalg.det(A), 4)
-            elif op == "Power of Matrix":
-                result = np.linalg.matrix_power(A, int(power))
-            elif op == "System of Equations (Ax = B)":
-                result = np.linalg.solve(A, B)
-                res_label = "Solution Vector X"
-
-            if result is not None:
-                st.markdown(f'<div style="height:12px"></div>', unsafe_allow_html=True)
-                res_c1, res_c2, res_c3 = st.columns([1, 2, 1])
-                with res_c2:
-                    st.markdown('<div class="panel-card">', unsafe_allow_html=True)
-                    st.markdown(f'<div class="panel-heading">✓ {res_label}</div>', unsafe_allow_html=True)
-                    st.dataframe(pd.DataFrame(np.round(result, 6)), use_container_width=True)
-                    st.markdown('</div>', unsafe_allow_html=True)
-
-        except np.linalg.LinAlgError as e:
-            st.error(f"Mathematical Error: {e}")
-        except ValueError as e:
-            st.error(f"Dimension Error: {e}")
-
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# ── FOOTER ──
-st.markdown("""
-<div style="text-align:center; padding:18px 0 10px 0;
-    font-family:'Crimson Pro',serif; font-size:0.78rem;
-    color:#8B7355; letter-spacing:0.12em; border-top:1px solid #D4B896; margin-top:20px;">
-    ✦ &nbsp; NUMERICAL METHODS &nbsp;·&nbsp; BSCOMPE-2 &nbsp;·&nbsp; DIOSAMABEL B. PENASO &nbsp; ✦
-</div>
-""", unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
