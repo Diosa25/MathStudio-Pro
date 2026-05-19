@@ -466,7 +466,7 @@ st.markdown("""
     <div class="vhdr">
         <div class="vhdr-name">DIOSAMABEL B. PENASO<br>BSCOMPE-2</div>
         <div class="vhdr-title">✦ &nbsp; NUMERICAL PROJECT &nbsp; ✦</div>
-        <div class="vhdr-right">Numerical Methods<br>Analysis Suite</div>
+        <div class="vhdr-right">Numerical Methods<br>Analysis </div>
     </div>
     <div class="ornament">— ✦ ◆ ✦ —</div>
 """, unsafe_allow_html=True)
@@ -503,14 +503,14 @@ if app_mode == "Root Finding Analysis":
         eq_str   = st.text_input("Equation  f(x)", value="x**3 - x - 2",
                                  help="Use Python syntax: x**2, sin(x), exp(x), log(x)")
         method   = st.selectbox("Algorithm", [
-            "Incremental Search",
+            "Incremental Method",
             "Bisection Method",
-            "Regula-Falsi",
-            "Newton-Raphson",
+            "Regula-Falsi Method",
+            "Newton-Raphson Method",
             "Secant Method",
         ])
 
-        if method in ["Bisection Method", "Regula-Falsi", "Incremental Search"]:
+        if method in ["Bisection Method", "Regula-Falsi", "Incremental "]:
             xl = st.number_input("Lower Bound  (xl)", value=1.0, format="%.4f")
             xu = st.number_input("Upper Bound  (xu)", value=2.0, format="%.4f")
         elif method == "Newton-Raphson":
@@ -590,7 +590,7 @@ if app_mode == "Root Finding Analysis":
                         if err < tol:
                             root, iterations, final_err = x2, i+1, err; break
 
-                elif method == "Incremental Search":
+                elif method == "Incremental ":
                     step, curr_x = 0.1, xl
                     for i in range(int(max_iter)):
                         next_x = curr_x + step
@@ -687,9 +687,9 @@ if app_mode == "Root Finding Analysis":
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  MODULE 2 — ADVANCED MATRIX OPERATIONS
+#  MODULE 2 —  MATRIX OPERATIONS
 # ══════════════════════════════════════════════════════════════════════════════
-elif app_mode == "Advanced Matrix Operations":
+elif app_mode == "Matrix Operations":
     st.markdown('<div class="stitle">⊞ Advanced Matrix Operations</div>', unsafe_allow_html=True)
     st.markdown('<div class="ssub">Input matrices using the interactive spreadsheets and execute linear algebra operations instantly.</div>', unsafe_allow_html=True)
 
