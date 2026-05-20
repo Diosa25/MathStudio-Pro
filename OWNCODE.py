@@ -484,48 +484,267 @@ app_mode = st.radio(
 st.markdown('</div>', unsafe_allow_html=True)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  MODULE 1 — ROOT FINDING ANALYSIS
-# ══════════════════════════════════════════════════════════════════════════════
+## ==========================================
+# MODULE 1: ROOT FINDING
+# ==========================================
 if app_mode == "Root Finding Analysis":
-    st.markdown('<div class="stitle">⚙ Root Finding Analysis</div>', unsafe_allow_html=True)
-    st.markdown('<div class="ssub">Select a numerical method, configure parameters, and instantly view the iteration table and graph.</div>', unsafe_allow_html=True)
-
-    # ── THREE-COLUMN DASHBOARD LAYOUT ──
-    col_left, col_right = st.columns([1, 2.35])
-
-    # ────────────────── LEFT — INPUTS ──────────────────
-    with col_left:
-        st.markdown('<div class="panel">', unsafe_allow_html=True)
-        st.markdown('<div class="panel-title">⚙ Parameters</div>', unsafe_allow_html=True)
-
-        eq_str   = st.text_input("Equation  f(x)", value="x**3 - x - 2",
-                                 help="Use Python syntax: x**2, sin(x), exp(x), log(x)")
-        method   = st.selectbox("Algorithm", [
-            "Incremental Method",
-            "Bisection Method",
-            "Regula-Falsi Method",
-            "Newton-Raphson Method",
-            "Secant Method",
-        ])
-
-        if method in ["Bisection Method", "Regula-Falsi Method", "Incremental Method"]:
-            xl = st.number_input("Lower Bound  (xl)", value=1.0, format="%.4f")
-            xu = st.number_input("Upper Bound  (xu)", value=2.0, format="%.4f")
+    st.title("Root Finding Analysis")
+    st.markdown("Analyze equations and find roots using numerical methods with interactive visualizations.")
+    
+    col_input, col_results = st.columns([1, 2.5])
+    
+    with col_input:
+        st.subheader("Parameters")
+        eq_str = st.text_input("Equation f(x)", value="3*x + sin(x) - exp(x)", help="Use standard Python math (e.g. x**3 or x^3, sin(x), exp(x))")
+        method = st.selectbox("Algorithm", ["Incremental Search", "Bisection Method", "Regula-Falsi", "Newton-Raphson", "Secant Method"])
+        
+        # Dynamic inputs based strictly on the provided documents
+        if method == "Incremental Search":
+            xl = st.number_input("Initial Value (xl)", value=0.0, format="%.4f")
+            delta_x = st.number_input("Initial Increment (Δx)", value=0.5, format="%.4f")
+        elif method in ["Bisection Method", "Regula-Falsi"]:
+            xl = st.number_input("Lower Bound (xl)", value=-0.5 if method == "Regula-Falsi" else 0.4, format="%.4f")
+            xu = st.number_input("Upper Bound (xu)", value=1.0 if method == "Regula-Falsi" else 0.6, format="%.4f")
         elif method == "Newton-Raphson":
-            x0 = st.number_input("Initial Guess  (x0)", value=1.0, format="%.4f")
+            x0 = st.number_input("Initial Guess (xi)", value=-5.0, format="%.4f")
         elif method == "Secant Method":
-            x0 = st.number_input("First Guess   (x0)", value=1.0, format="%.4f")
-            x1 = st.number_input("Second Guess  (x1)", value=2.0, format="%.4f")
+            x_prev = st.number_input("First Guess (x_i-1)", value=0.5, format="%.4f")
+            x0 = st.number_input("Second Guess (x_i)", value=5.0, format="%.4f")
+            
+        tol = st.number_input("Tolerance (Stopping Criterion)", value=0.001, format="%.5f")
+        max_iter = st.number_input("Max Iterations", value=50, step=1)
+        solve_btn = st.button("Calculate Root")
 
-        c_tol, c_iter = st.columns(2)
-        tol      = c_tol.number_input("Tolerance",      value=0.0001, format="%.6f")
-        max_iter = c_iter.number_input("Max Iterations", value=50, step=1)
+    with col_results:
+        if solve_btn:
+            try:
+                x = sp.Symbol('x')
+                safe_eq_str = eq_str.replace('^', '**')
+                expr = sp.sympify(safe_eq_str)
+                f = sp.lambdify(x, expr, 'numpy')
+                df = sp.lambdify(x, sp.diff(expr, x), 'numpy')
 
-        st.markdown("<div style='margin-top:0.6rem;'>", unsafe_allow_html=True)
-        solve_btn = st.button("⟳  Calculate Root", use_container_width=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)   # /panel
+                results, root, iterations, final_err = [], None, 0, 0
+                
+                # --- 1. INCREMENTAL SEARCH ---
+                if method == "Incremental Search":
+                    curr_xl = xl
+                    curr_dx = delta_x
+                    
+                    for i in range(max_iter):
+                        curr_xu = curr_xl + curr_dx
+                        fxl, fxu = f(curr_xl), f(curr_xu)
+                        prod = fxl * fxu
+                        
+                        if prod > 0:
+                            remark = "Go to next interval"
+                        else:
+                            remark = "Revert back to xl & consider smaller interval"
+                            
+                        # Matching PDF Table Columns
+                        results.append({
+                            "Iteration": i + 1,
+                            "x_l": curr_xl,
+                            "Δx": curr_dx,
+                            "x_u": curr_xu,
+                            "f(x_l)": fxl,
+                            "f(x_u)": fxu,
+                            "f(x_l)*f(x_u)": "> 0" if prod > 0 else "< 0",
+                            "Remark": remark
+                        })
+                        
+                        if abs(fxu) < tol or curr_dx < (tol / 10):
+                            root, iterations = curr_xu, i + 1
+                            break
+                            
+                        if prod > 0:
+                            curr_xl = curr_xu  # Go to next interval
+                        else:
+                            curr_dx = curr_dx / 10.0  # Reduce interval step
+                            
+                # --- 2. BISECTION METHOD ---
+                elif method == "Bisection Method":
+                    if f(xl) * f(xu) > 0:
+                        st.warning("f(xl) and f(xu) must have opposite signs for Bisection.")
+                        st.stop()
+                        
+                    xr_old = None
+                    for i in range(max_iter):
+                        xr = (xl + xu) / 2
+                        fxl, fxr = f(xl), f(xr)
+                        prod = fxl * fxr
+                        
+                        ea = abs((xr - xr_old) / xr) * 100 if xr_old is not None else None
+                        
+                        if prod < 0:
+                            remark = "1st subinterval"
+                        else:
+                            remark = "2nd subinterval"
+                            
+                        # Matching PDF Table Columns
+                        results.append({
+                            "Iteration": i + 1,
+                            "x_l": xl,
+                            "x_r": xr,
+                            "x_u": xu,
+                            "f(x_l)": fxl,
+                            "f(x_r)": fxr,
+                            "|E_a| %": ea if ea is not None else "",
+                            "f(x_l)*f(x_r)": "< 0" if prod < 0 else "> 0",
+                            "Remark": remark
+                        })
+                        
+                        if (ea is not None and ea < tol) or fxr == 0:
+                            root, iterations, final_err = xr, i + 1, ea
+                            break
+                            
+                        if prod < 0:
+                            xu = xr
+                        else:
+                            xl = xr
+                        xr_old = xr
+
+                # --- 3. REGULA-FALSI (FALSE POSITION) ---
+                elif method == "Regula-Falsi":
+                    if f(xl) * f(xu) > 0:
+                        st.warning("f(xl) and f(xu) must have opposite signs for Regula-Falsi.")
+                        st.stop()
+                        
+                    xr_old = None
+                    for i in range(max_iter):
+                        fxl, fxu = f(xl), f(xu)
+                        if fxl - fxu == 0:
+                            st.error("Division by zero encountered.")
+                            break
+                            
+                        xr = (xu * fxl - xl * fxu) / (fxl - fxu)
+                        fxr = f(xr)
+                        prod = fxl * fxr
+                        
+                        ea = abs((xr - xr_old) / xr) if xr_old is not None else None
+                        
+                        # Matching PDF Table Columns
+                        results.append({
+                            "No. of Iteration": i + 1,
+                            "x_L": xl,
+                            "x_U": xu,
+                            "x_R": xr,
+                            "E_a": ea if ea is not None else "",
+                            "f(x_L)": fxl,
+                            "f(x_U)": fxu,
+                            "f(x_R)": fxr,
+                            "f(x_L)*f(x_R)": "< 0" if prod < 0 else "> 0"
+                        })
+                        
+                        if (ea is not None and ea < tol) or fxr == 0:
+                            root, iterations, final_err = xr, i + 1, ea
+                            break
+                            
+                        if prod < 0:
+                            xu = xr
+                        else:
+                            xl = xr
+                        xr_old = xr
+
+                # --- 4. NEWTON-RAPHSON ---
+                elif method == "Newton-Raphson":
+                    xi = x0
+                    # Initial state (Iteration 0) matching PDF format
+                    results.append({
+                        "No. of iteration": 0,
+                        "x_i": xi,
+                        "E_a": "",
+                        "f(x)": f(xi),
+                        "f'(x)": df(xi)
+                    })
+                    
+                    for i in range(max_iter):
+                        fxi, dfxi = f(xi), df(xi)
+                        if dfxi == 0:
+                            st.error("Derivative became zero. Newton-Raphson fails.")
+                            break
+                            
+                        xi_new = xi - fxi / dfxi
+                        ea = abs((xi_new - xi) / xi_new)
+                        
+                        xi = xi_new
+                        # Matching PDF Table Columns
+                        results.append({
+                            "No. of iteration": i + 1,
+                            "x_i": xi,
+                            "E_a": ea,
+                            "f(x)": f(xi),
+                            "f'(x)": df(xi)
+                        })
+                        
+                        if ea < tol:
+                            root, iterations, final_err = xi, i + 1, ea
+                            break
+
+                # --- 5. SECANT METHOD ---
+                elif method == "Secant Method":
+                    xi_prev, xi = x_prev, x0
+                    for i in range(max_iter):
+                        fxi, fxi_prev = f(xi), f(xi_prev)
+                        if fxi - fxi_prev == 0:
+                            st.error("Difference between f(x_i) and f(x_i-1) is zero. Secant fails.")
+                            break
+                            
+                        xi_new = xi - (fxi * (xi - xi_prev)) / (fxi - fxi_prev)
+                        ea = abs((xi_new - xi) / xi_new)
+                        
+                        # Matching Word Document Table Columns
+                        results.append({
+                            "Iteration Number": i + 1,
+                            "x_{i-1}": xi_prev,
+                            "x_i": xi,
+                            "x_{i+1}": xi_new,
+                            "E_a": ea,
+                            "f(x_{i-1})": fxi_prev,
+                            "f(x_i)": fxi,
+                            "f(x_{i+1})": f(xi_new)
+                        })
+                        
+                        xi_prev, xi = xi, xi_new
+                        if ea < tol:
+                            root, iterations, final_err = xi_new, i + 1, ea
+                            break
+
+                # --- METRICS & GRAPH ---
+                if len(results) > 0:
+                    if root is not None:
+                        st.toast('Calculation Complete!', icon='✅')
+                    else:
+                        st.toast('Max iterations reached or stopped.', icon='⚠️')
+                        # Extract the best guess for graph centering
+                        latest_row = results[-1]
+                        root = latest_row.get("x_u", latest_row.get("x_R", latest_row.get("x_i", latest_row.get("x_{i+1}", 0))))
+                    
+                    m1, m2, m3 = st.columns(3)
+                    m1.metric("Calculated Root", f"{root:.6f}")
+                    m2.metric("Total Iterations", iterations if iterations > 0 else max_iter)
+                    m3.metric("Final Error (E_a)", f"{final_err:.6f}" if final_err else "N/A")
+                    st.divider()
+
+                    # Interactive Plotly Graph
+                    x_vals = np.linspace(float(root) - 3, float(root) + 3, 300)
+                    y_vals = f(x_vals)
+                    
+                    fig = go.Figure()
+                    fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', name='f(x)', line=dict(color='royalblue', width=2)))
+                    fig.add_hline(y=0, line_dash="dash", line_color="black")
+                    fig.add_vline(x=0, line_dash="dash", line_color="black")
+                    fig.add_trace(go.Scatter(x=[root], y=[0], mode='markers', name='Root', marker=dict(color='red', size=12, symbol='x')))
+                    
+                    fig.update_layout(title="Interactive Function Graph", xaxis_title="X Axis", yaxis_title="Y Axis", hovermode="x unified", margin=dict(l=0, r=0, t=40, b=0))
+                    st.plotly_chart(fig, use_container_width=True)
+
+                    # Dynamic Expander Table - Pandas automatically reads the dictionaries and sets the exact headers
+                    with st.expander("📊 View Detailed Iteration History", expanded=True):
+                        st.dataframe(pd.DataFrame(results), use_container_width=True)
+
+            except Exception as e:
+                st.error(f"Error evaluating equation or solving. Details: {e}")
 
     # ────────────────── RIGHT — TABLE + GRAPH ──────────────────
     with col_right:
