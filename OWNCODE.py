@@ -920,4 +920,4 @@ elif app_mode == "Advanced Matrix Operations":
                         The result will appear here immediately.
                     </div>
                 </div>
-            """, unsafe_allow_html=True)V
+            """, unsafe_allow_html=True)
