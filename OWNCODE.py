@@ -747,7 +747,7 @@ if app_mode == "Root Finding Analysis":
                 st.error(f"Error evaluating equation or solving. Details: {e}")
 
     # ────────────────── RIGHT — TABLE + GRAPH ──────────────────
-    with col_right:
+    with col_results:
 
         # ── COMPUTE ON BUTTON PRESS ──
         if solve_btn:
