@@ -512,7 +512,7 @@ if app_mode == "Root Finding Analysis":
         if method in ["Bisection Method", "Regula-Falsi Method", "Incremental Method"]:
             xl = st.number_input("Lower Bound  (xl)", value=1.0, format="%.4f")
             xu = st.number_input("Upper Bound  (xu)", value=2.0, format="%.4f")
-        elif method == "Newton-Raphson":
+        elif method == "Newton-Raphson Method":
             x0 = st.number_input("Initial Guess  (x0)", value=1.0, format="%.4f")
         elif method == "Secant Method":
             x0 = st.number_input("First Guess   (x0)", value=1.0, format="%.4f")
@@ -540,63 +540,166 @@ if app_mode == "Root Finding Analysis":
 
                 results, root, iterations, final_err = [], None, 0, 0
 
-                if method == "Bisection Method":
-                    _xl, _xu = xl, xu
+                # ── INCREMENTAL METHOD ──
+                # Columns: Iteration | x_l | Δx | x_u | f(x_l) | f(x_u) | f(x_l)·f(x_u) | Remark
+                if method == "Incremental Method":
+                    step   = tol if tol > 0 else 0.1
+                    curr_x = xl
                     for i in range(int(max_iter)):
-                        xr  = (_xl + _xu) / 2
-                        err = abs(_xu - _xl) / 2
-                        results.append({"Iter": i+1, "xl": round(_xl,7), "xu": round(_xu,7),
-                                         "xr": round(xr,7), "f(xr)": round(float(f(xr)),7), "Error": round(err,8)})
-                        if f(xr) == 0 or err < tol:
-                            root, iterations, final_err = xr, i+1, err; break
-                        if f(_xl) * f(xr) < 0: _xu = xr
-                        else: _xl = xr
+                        next_x = curr_x + step
+                        fxl    = float(f(curr_x))
+                        fxu    = float(f(next_x))
+                        prod   = fxl * fxu
+                        remark = "Sign change — root bracketed" if prod < 0 else ""
+                        results.append({
+                            "Iteration":        i + 1,
+                            "x_l":              round(curr_x, 7),
+                            "Δx":               round(step,   7),
+                            "x_u":              round(next_x, 7),
+                            "f(x_l)":           round(fxl,   7),
+                            "f(x_u)":           round(fxu,   7),
+                            "f(x_l)·f(x_u)":   round(prod,   7),
+                            "Remark":           remark,
+                        })
+                        if prod < 0:
+                            root, iterations, final_err = (curr_x + next_x) / 2, i + 1, abs(step)
+                            break
+                        curr_x = next_x
 
+                # ── BISECTION METHOD ──
+                # Columns: Iteration | x_l | x_r | x_u | f(x_l) | f(x_r) | |ea|% | f(x_l)·f(x_r) | Remark
+                elif method == "Bisection Method":
+                    _xl, _xu = xl, xu
+                    xr_old   = None
+                    for i in range(int(max_iter)):
+                        xr   = (_xl + _xu) / 2
+                        fxl  = float(f(_xl))
+                        fxr  = float(f(xr))
+                        prod = fxl * fxr
+                        first_iter = (xr_old is None)
+                        ea   = float('nan') if first_iter else abs((xr - xr_old) / xr) * 100
+                        if prod < 0:
+                            remark = "Root in [x_l, x_r]"
+                        elif prod > 0:
+                            remark = "Root in [x_r, x_u]"
+                        else:
+                            remark = "Exact root"
+                        results.append({
+                            "Iteration":        i + 1,
+                            "x_l":              round(_xl,  7),
+                            "x_r":              round(xr,   7),
+                            "x_u":              round(_xu,  7),
+                            "f(x_l)":           round(fxl,  7),
+                            "f(x_r)":           round(fxr,  7),
+                            "|ea|%":            "—" if first_iter else round(ea, 6),
+                            "f(x_l)·f(x_r)":   round(prod,  7),
+                            "Remark":           remark,
+                        })
+                        xr_old = xr
+                        if fxr == 0 or (not first_iter and ea < tol):
+                            root, iterations, final_err = xr, i + 1, 0 if first_iter else ea
+                            break
+                        if prod < 0:
+                            _xu = xr
+                        else:
+                            _xl = xr
+                    if root is None and results:
+                        root, iterations, final_err = results[-1]["x_r"], len(results), 0
+
+                # ── REGULA-FALSI METHOD ──
+                # Columns: No. of Iteration | x_L | x_U | x_R | ea | f(x_L) | f(x_U) | f(x_R) | f(x_L)·f(x_R)
                 elif method == "Regula-Falsi Method":
                     _xl, _xu = xl, xu
+                    xr_old   = None
                     for i in range(int(max_iter)):
-                        xr  = _xu - (f(_xu) * (_xl - _xu)) / (f(_xl) - f(_xu))
-                        err = abs(f(xr))
-                        results.append({"Iter": i+1, "xl": round(_xl,7), "xu": round(_xu,7),
-                                         "xr": round(xr,7), "f(xr)": round(float(f(xr)),7), "Error": round(err,8)})
-                        if err < tol:
-                            root, iterations, final_err = xr, i+1, err; break
-                        if f(_xl) * f(xr) < 0: _xu = xr
-                        else: _xl = xr
+                        fxl = float(f(_xl))
+                        fxu = float(f(_xu))
+                        xr  = _xu - (fxu * (_xl - _xu)) / (fxl - fxu)
+                        fxr = float(f(xr))
+                        prod = fxl * fxr
+                        first_iter = (xr_old is None)
+                        ea   = float('nan') if first_iter else abs((xr - xr_old) / xr) * 100
+                        results.append({
+                            "No. of Iteration": i + 1,
+                            "x_L":              round(_xl, 7),
+                            "x_U":              round(_xu, 7),
+                            "x_R":              round(xr,  7),
+                            "ea":               "—" if first_iter else round(ea, 6),
+                            "f(x_L)":           round(fxl, 7),
+                            "f(x_U)":           round(fxu, 7),
+                            "f(x_R)":           round(fxr, 7),
+                            "f(x_L)·f(x_R)":   round(prod, 7),
+                        })
+                        xr_old = xr
+                        if not first_iter and ea < tol:
+                            root, iterations, final_err = xr, i + 1, ea
+                            break
+                        if prod < 0:
+                            _xu = xr
+                        elif prod > 0:
+                            _xl = xr
+                        else:
+                            root, iterations, final_err = xr, i + 1, 0
+                            break
+                    if root is None and results:
+                        root, iterations, final_err = results[-1]["x_R"], len(results), 0
 
+                # ── NEWTON-RAPHSON METHOD ──
+                # Columns: No. of iteration | x_i | ea | f(x) | f'(x)
                 elif method == "Newton-Raphson Method":
                     xr = x0
                     for i in range(int(max_iter)):
-                        fxr, dfxr = f(xr), dfdx(xr)
+                        fxr  = float(f(xr))
+                        dfxr = float(dfdx(xr))
+                        if abs(dfxr) < 1e-14:
+                            st.error("Derivative is zero — choose a different initial guess.")
+                            break
                         xr_new = xr - fxr / dfxr
-                        err = abs(xr_new - xr)
-                        results.append({"Iter": i+1, "xi": round(xr,7),
-                                         "f(xi)": round(float(fxr),7), "f'(xi)": round(float(dfxr),7),
-                                         "xi+1": round(xr_new,7), "Error": round(err,8)})
+                        ea     = abs((xr_new - xr) / xr_new) * 100 if xr_new != 0 else float('nan')
+                        results.append({
+                            "No. of iteration": i + 1,
+                            "x_i":              round(xr_new, 7),
+                            "ea":               round(ea,     6) if not (xr_new == 0) else "—",
+                            "f(x)":             round(fxr,   7),
+                            "f'(x)":            round(dfxr,  7),
+                        })
                         xr = xr_new
-                        if err < tol:
-                            root, iterations, final_err = xr, i+1, err; break
+                        if ea < tol:
+                            root, iterations, final_err = xr, i + 1, ea
+                            break
+                    if root is None and results:
+                        root, iterations, final_err = results[-1]["x_i"], len(results), 0
 
+                # ── SECANT METHOD ──
+                # Columns: Iteration Number | x_{i-1} | x_i | x_{i+1} | ea | f(x_{i-1}) | f(x_i) | f(x_{i+1})
                 elif method == "Secant Method":
                     _x0, _x1 = x0, x1
                     for i in range(int(max_iter)):
-                        fx1_, fx0_ = f(_x1), f(_x0)
-                        x2  = _x1 - (fx1_ * (_x0 - _x1)) / (fx0_ - fx1_)
-                        err = abs(x2 - _x1)
-                        results.append({"Iter": i+1, "x(i-1)": round(_x0,7), "x(i)": round(_x1,7),
-                                         "x(i+1)": round(x2,7), "f(x(i+1))": round(float(f(x2)),7), "Error": round(err,8)})
+                        fx0_ = float(f(_x0))
+                        fx1_ = float(f(_x1))
+                        denom = fx0_ - fx1_
+                        if abs(denom) < 1e-14:
+                            st.error("Near-zero denominator — choose different starting points.")
+                            break
+                        x2   = _x1 - (fx1_ * (_x0 - _x1)) / denom
+                        fx2_ = float(f(x2))
+                        ea   = abs((x2 - _x1) / x2) * 100 if x2 != 0 else float('nan')
+                        results.append({
+                            "Iteration Number": i + 1,
+                            "x_{i-1}":          round(_x0, 7),
+                            "x_i":              round(_x1, 7),
+                            "x_{i+1}":          round(x2,  7),
+                            "ea":               round(ea,  6) if x2 != 0 else "—",
+                            "f(x_{i-1})":       round(fx0_, 7),
+                            "f(x_i)":           round(fx1_, 7),
+                            "f(x_{i+1})":       round(fx2_, 7),
+                        })
                         _x0, _x1 = _x1, x2
-                        if err < tol:
-                            root, iterations, final_err = x2, i+1, err; break
-
-                elif method == "Incremental Method":
-                    step, curr_x = 0.1, xl
-                    for i in range(int(max_iter)):
-                        next_x = curr_x + step
-                        results.append({"Iter": i+1, "x": round(curr_x,7), "f(x)": round(float(f(curr_x)),7)})
-                        if f(curr_x) * f(next_x) < 0:
-                            root, iterations, final_err = (curr_x + next_x) / 2, i+2, 0; break
-                        curr_x = next_x
+                        if ea < tol:
+                            root, iterations, final_err = x2, i + 1, ea
+                            break
+                    if root is None and results:
+                        root, iterations, final_err = results[-1]["x_{i+1}"], len(results), 0
 
                 if root is not None:
                     # Build Plotly figure with vintage palette
@@ -817,4 +920,4 @@ elif app_mode == "Advanced Matrix Operations":
                         The result will appear here immediately.
                     </div>
                 </div>
-            """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)V
