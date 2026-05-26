@@ -1079,7 +1079,7 @@ with col_main:
                         "answer":    f"{len(unique_for_plot)} root(s): {roots_str}",
                         "timestamp": datetime.now().strftime("%b %d %H:%M:%S"),
                     })
-                    st.toast(f"Found {len(unique_for_plot)} root(s)!", icon="⊛")
+                    st.toast(f"Found {len(unique_for_plot)} root(s)!", icon="✅")
 
     # ── DISPLAY RESULTS ──
     if st.session_state.solve_results:
