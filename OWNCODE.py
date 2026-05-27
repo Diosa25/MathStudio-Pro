@@ -4,7 +4,10 @@ import pandas as pd
 import sympy as sp
 import plotly.graph_objects as go
 import time
+import warnings
 from datetime import datetime
+
+warnings.filterwarnings('ignore')
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  PAGE CONFIG
@@ -21,15 +24,14 @@ st.set_page_config(
 # ══════════════════════════════════════════════════════════════════════════════
 for key, val in {
     "rf_results":    [],
-    "rf_roots":      [],
     "rf_root":       None,
+    "rf_all_roots":  [],
     "rf_iterations": 0,
     "rf_error":      0,
     "rf_fig":        None,
     "rf_eq":         "",
     "rf_method":     "",
-    "rf_exec_time":  0,
-    "rf_all_results":[],
+    "rf_summary":    [],
     "mx_result":     None,
     "mx_op":         "",
     "history":       [],
@@ -38,7 +40,7 @@ for key, val in {
         st.session_state[key] = val
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  MASTER CSS — VINTAGE BROWN ACADEMIC DASHBOARD (preserved exactly)
+#  MASTER CSS — VINTAGE BROWN ACADEMIC DASHBOARD (UNCHANGED)
 # ══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
@@ -196,59 +198,6 @@ html, body, [class*="css"], .stApp {
     gap: 0.4rem;
 }
 
-/* ─── ROOT BADGE ──────────────────────────────────────────────────────────── */
-.root-badge {
-    display: inline-block;
-    background: linear-gradient(135deg, #5C3317, #8B5E3C);
-    color: #F5E6C8;
-    font-family: 'Playfair Display', serif;
-    font-size: 0.85rem;
-    font-weight: 700;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    margin: 0.2rem;
-    box-shadow: 0 2px 8px var(--shadow);
-    letter-spacing: 0.04em;
-}
-.root-badge-complex {
-    display: inline-block;
-    background: linear-gradient(135deg, #2C4A6E, #3A6490);
-    color: #C8DEFF;
-    font-family: 'Playfair Display', serif;
-    font-size: 0.85rem;
-    font-weight: 700;
-    padding: 0.25rem 0.75rem;
-    border-radius: 20px;
-    margin: 0.2rem;
-    box-shadow: 0 2px 8px rgba(44,74,110,0.35);
-    letter-spacing: 0.04em;
-}
-.roots-summary {
-    background: linear-gradient(160deg, #EDE0C4 0%, #E2CFA8 100%);
-    border: 2px solid var(--border2);
-    border-radius: 12px;
-    padding: 1rem 1.25rem;
-    margin-bottom: 0.75rem;
-    box-shadow: 3px 4px 18px var(--shadow);
-}
-.roots-summary-title {
-    font-family: 'Playfair Display', serif;
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: var(--brown-md);
-    margin-bottom: 0.6rem;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 0.35rem;
-    letter-spacing: 0.05em;
-}
-.exec-badge {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 0.82rem;
-    color: #6B4226;
-    font-style: italic;
-    margin-top: 0.3rem;
-}
-
 /* ─── WIDGET OVERRIDES ────────────────────────────────────────────────────── */
 div[data-testid="stRadio"] label > div p {
     font-family: 'Playfair Display', serif !important;
@@ -258,8 +207,7 @@ div[data-testid="stRadio"] label > div p {
 }
 .stSelectbox > label,
 .stNumberInput > label,
-.stTextInput > label,
-.stSlider > label {
+.stTextInput > label {
     font-family: 'Crimson Text', serif !important;
     color: #4A2A12 !important;
     font-size: 0.95rem !important;
@@ -350,7 +298,7 @@ div[data-testid="stRadio"] label > div p {
     background-color: #EDE0C4 !important;
 }
 
-/* ─── INFO / SUCCESS / WARNING ────────────────────────────────────────────── */
+/* ─── INFO / SUCCESS ──────────────────────────────────────────────────────── */
 [data-testid="stInfo"] {
     background-color: #EDE0C4 !important;
     border-left: 4px solid var(--brown-lt) !important;
@@ -454,6 +402,15 @@ hr {
     border-bottom: 1px solid rgba(200,169,122,0.35);
     margin-bottom: 0.7rem;
 }
+.sidebar-name {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 0.82rem;
+    color: #B8936A;
+    text-align: center;
+    margin-bottom: 0.25rem;
+    letter-spacing: 0.06em;
+}
 
 /* ─── PLACEHOLDER TEXT ───────────────────────────────────────────────────── */
 .placeholder-box {
@@ -466,339 +423,570 @@ hr {
     line-height: 1.7;
 }
 
-/* ─── COMPARISON TABLE ───────────────────────────────────────────────────── */
-.compare-header {
+/* ─── ROOT SUMMARY TABLE ─────────────────────────────────────────────────── */
+.root-summary-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    background: rgba(196,168,130,0.18);
+    border-radius: 6px;
+    margin-bottom: 0.35rem;
+    font-family: 'Crimson Text', serif;
+    font-size: 0.92rem;
+    color: var(--brown-dk);
+}
+.root-badge {
+    background: var(--brown-md);
+    color: #F5E6C8;
+    border-radius: 50%;
+    width: 22px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
     font-family: 'Playfair Display', serif;
-    font-size: 1rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    color: var(--brown-md);
-    letter-spacing: 0.04em;
-    margin: 0.75rem 0 0.4rem 0;
+    flex-shrink: 0;
 }
 </style>
 """, unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  HELPER FUNCTIONS
+#  ENHANCED EQUATION PARSER & SAFE EVALUATOR
 # ══════════════════════════════════════════════════════════════════════════════
 
 def parse_equation(eq_str: str):
-    """Safely parse equation string, returning (sympy_expr, numpy_func, numpy_deriv_func)."""
+    """
+    Parse equation string to sympy expression with full support for:
+    ln, log, exp, e^x, trig, polynomials, binomials, implicit multiplication.
+    Returns (sympy_expr, lambdified_f, lambdified_df) or raises.
+    """
     x = sp.Symbol('x')
-    safe = (eq_str.strip()
-            .replace('^', '**')
-            .replace('ln(', 'log(')   # sympy uses log for ln
-            .replace('e^', 'exp(1)**') )
-    # Handle e^(...) patterns
-    safe = safe.replace('exp(1)**(', 'exp(')
-    expr = sp.sympify(safe, locals={'x': x, 'e': sp.E, 'pi': sp.pi,
-                                     'sin': sp.sin, 'cos': sp.cos, 'tan': sp.tan,
-                                     'exp': sp.exp, 'log': sp.log, 'sqrt': sp.sqrt,
-                                     'abs': sp.Abs})
-    f    = sp.lambdify(x, expr, modules=['numpy'])
-    dexpr = sp.diff(expr, x)
-    df   = sp.lambdify(x, dexpr, modules=['numpy'])
-    return expr, f, df, dexpr
+
+    # Preprocessing
+    s = eq_str.strip()
+    s = s.replace('^', '**')                      # ^ → **
+    s = s.replace('e**x', 'exp(x)')               # common shorthand
+    # Implicit multiplication: e.g. 2x → 2*x, (x+1)(x-2) → (x+1)*(x-2)
+    import re
+    s = re.sub(r'(\d)(x)', r'\1*\2', s)           # 3x → 3*x
+    s = re.sub(r'(x)(\d)', r'\1*\2', s)           # x3 → x*3 (rare)
+    s = re.sub(r'\)(\()', r')*(', s)              # )(  → )*(
+    s = re.sub(r'(\d)\(', r'\1*(', s)             # 2( → 2*(
+    # ln → log in sympy
+    s = re.sub(r'\bln\b', 'log', s)
+
+    local_dict = {
+        'x': x, 'pi': sp.pi, 'e': sp.E,
+        'sin': sp.sin, 'cos': sp.cos, 'tan': sp.tan,
+        'asin': sp.asin, 'acos': sp.acos, 'atan': sp.atan,
+        'sinh': sp.sinh, 'cosh': sp.cosh, 'tanh': sp.tanh,
+        'exp': sp.exp, 'log': sp.log, 'log10': lambda a: sp.log(a, 10),
+        'sqrt': sp.sqrt, 'Abs': sp.Abs, 'abs': sp.Abs,
+    }
+
+    expr = sp.sympify(s, locals=local_dict, evaluate=True)
+    f_sym  = expr
+    df_sym = sp.diff(expr, x)
+
+    # Create safe numpy lambdify with domain protection
+    modules = ['numpy', {'log': np.log, 'exp': np.exp, 'sqrt': np.sqrt,
+                          'sin': np.sin, 'cos': np.cos, 'tan': np.tan,
+                          'asin': np.arcsin, 'acos': np.arccos, 'atan': np.arctan,
+                          'Abs': np.abs}]
+
+    f_raw  = sp.lambdify(x, f_sym,  modules)
+    df_raw = sp.lambdify(x, df_sym, modules)
+
+    def f_safe(val):
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                result = f_raw(val)
+                if np.isscalar(result):
+                    return float(result) if np.isfinite(result) else np.nan
+                arr = np.array(result, dtype=float)
+                arr[~np.isfinite(arr)] = np.nan
+                return arr
+        except Exception:
+            if np.isscalar(val):
+                return np.nan
+            return np.full(np.shape(val), np.nan)
+
+    def df_safe(val):
+        try:
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                result = df_raw(val)
+                if np.isscalar(result):
+                    return float(result) if np.isfinite(result) else np.nan
+                arr = np.array(result, dtype=float)
+                arr[~np.isfinite(arr)] = np.nan
+                return arr
+        except Exception:
+            return np.nan if np.isscalar(val) else np.full(np.shape(val), np.nan)
+
+    return expr, f_safe, df_safe
 
 
-def safe_eval(f, val):
-    """Evaluate f(val) safely, returning float or None."""
-    try:
-        result = float(f(val))
-        if np.isnan(result) or np.isinf(result):
-            return None
-        return result
-    except Exception:
-        return None
+# ══════════════════════════════════════════════════════════════════════════════
+#  INTERVAL SCANNER — find ALL bracketing intervals
+# ══════════════════════════════════════════════════════════════════════════════
 
-
-def find_sign_changes(f, x_min, x_max, n_points=2000):
-    """Scan for sign changes in [x_min, x_max] to locate root brackets."""
-    xs   = np.linspace(x_min, x_max, n_points)
+def scan_for_brackets(f, x_start, x_end, step=0.5):
+    """
+    Scan [x_start, x_end] with given step size.
+    Returns list of (a, b) pairs where sign change occurs (potential roots).
+    Handles domain gaps (NaN) gracefully.
+    """
     brackets = []
-    for i in range(len(xs) - 1):
-        fa = safe_eval(f, xs[i])
-        fb = safe_eval(f, xs[i+1])
-        if fa is None or fb is None:
+    pts = np.arange(x_start, x_end + step * 0.01, step)
+    vals = np.array([f(p) for p in pts], dtype=float)
+
+    last_valid_i = None
+    for i in range(len(pts)):
+        if not np.isfinite(vals[i]):
+            last_valid_i = None
             continue
-        if fa * fb < 0:
-            brackets.append((xs[i], xs[i+1]))
+        if last_valid_i is not None:
+            a, b = pts[last_valid_i], pts[i]
+            fa, fb = vals[last_valid_i], vals[i]
+            if fa * fb < 0:
+                brackets.append((a, b))
+            elif abs(fa) < 1e-10:  # direct root near a
+                # Already captured or will be captured elsewhere
+                pass
+        last_valid_i = i
+
     return brackets
 
 
-def find_sympy_roots(expr):
-    """Use sympy to find all exact/numeric roots including complex."""
-    x = sp.Symbol('x')
-    try:
-        roots = sp.solve(expr, x)
-        return roots
-    except Exception:
-        try:
-            return sp.nroots(sp.Poly(expr, x), n=15, maxsteps=500)
-        except Exception:
-            return []
+def deduplicate_roots(roots, tol=1e-6):
+    """Remove duplicate roots that are closer than tol."""
+    if not roots:
+        return []
+    sorted_r = sorted(roots, key=lambda r: r[0])
+    deduped = [sorted_r[0]]
+    for r in sorted_r[1:]:
+        if abs(r[0] - deduped[-1][0]) > tol:
+            deduped.append(r)
+    return deduped
 
 
-def bisection_solve(f, xl, xu, tol, max_iter):
-    """Bisection method. Returns (root, iterations, final_error, table)."""
+# ══════════════════════════════════════════════════════════════════════════════
+#  NUMERICAL METHOD SOLVERS (upgraded — multi-root aware, domain-safe)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def solve_bisection(f, a, b, tol, max_iter):
     results = []
     xr_old  = None
-    root = iterations = final_err = None
+    root    = None
+    final_err = 0.0
+
     for i in range(int(max_iter)):
-        xr  = (xl + xu) / 2.0
-        fxl, fxr = safe_eval(f, xl), safe_eval(f, xr)
-        if fxl is None or fxr is None:
+        xr  = (a + b) / 2.0
+        fxl = f(a); fxr = f(xr)
+
+        if not (np.isfinite(fxl) and np.isfinite(xr)):
             break
-        ea  = abs((xr - xr_old) / xr) * 100 if xr_old is not None else None
+
+        ea  = abs((xr - xr_old) / xr) * 100 if xr_old is not None and xr != 0 else None
         prod = fxl * fxr
+
         results.append({
             "Iter": i + 1,
-            "x_l":     round(xl, 8),
-            "x_r":     round(xr, 8),
-            "x_u":     round(xu, 8),
-            "f(x_l)":  round(fxl, 8),
-            "f(x_r)":  round(fxr, 8),
-            "|Ea| %":  round(ea, 6) if ea is not None else "—",
-            "Sign":    "< 0" if prod < 0 else "> 0",
+            "x_l":     round(float(a),  8),
+            "x_r":     round(float(xr), 8),
+            "x_u":     round(float(b),  8),
+            "f(x_l)":  round(float(fxl), 8),
+            "f(x_r)":  round(float(fxr), 8),
+            "|E_a| %": round(ea, 6) if ea is not None else "",
+            "Sign(f_l·f_r)": "< 0" if prod < 0 else ("> 0" if prod > 0 else "= 0"),
+            "Remark":  "1st sub-interval" if prod < 0 else "2nd sub-interval",
         })
-        if (ea is not None and ea < tol * 100) or fxr == 0:
-            root, iterations, final_err = xr, i + 1, ea or 0.0
+
+        if fxr == 0 or (ea is not None and ea < tol):
+            root, final_err = xr, ea or 0.0
             break
+
         if prod < 0:
-            xu = xr
+            b = xr
         else:
-            xl = xr
+            a = xr
         xr_old = xr
-    if root is None:
-        root = (xl + xu) / 2.0
-        iterations = int(max_iter)
-        final_err  = abs(xu - xl) / 2.0
-    return root, iterations, final_err, results
+
+    if root is None and results:
+        root = results[-1]["x_r"]
+        final_err = results[-1]["|E_a| %"] or 0.0
+
+    return root, len(results), final_err, results
 
 
-def regula_falsi_solve(f, xl, xu, tol, max_iter):
-    """Regula-Falsi method."""
-    results = []
-    xr_old  = None
-    root = iterations = final_err = None
-    for i in range(int(max_iter)):
-        fxl, fxu = safe_eval(f, xl), safe_eval(f, xu)
-        if fxl is None or fxu is None or (fxl - fxu) == 0:
-            break
-        xr   = (xu * fxl - xl * fxu) / (fxl - fxu)
-        fxr  = safe_eval(f, xr)
-        if fxr is None:
-            break
-        ea   = abs((xr - xr_old) / xr) if xr_old is not None and xr != 0 else None
-        prod = fxl * fxr
-        results.append({
-            "Iter":    i + 1,
-            "x_L":     round(xl, 8),
-            "x_U":     round(xu, 8),
-            "x_R":     round(xr, 8),
-            "Ea":      round(ea, 8) if ea is not None else "—",
-            "f(x_L)":  round(fxl, 8),
-            "f(x_U)":  round(fxu, 8),
-            "f(x_R)":  round(fxr, 8),
-            "Sign":    "< 0" if prod < 0 else "> 0",
-        })
-        if (ea is not None and ea < tol) or fxr == 0:
-            root, iterations, final_err = xr, i + 1, ea or 0.0
-            break
-        if prod < 0:
-            xu = xr
-        else:
-            xl = xr
-        xr_old = xr
-    if root is None:
-        root = xr if results else (xl + xu) / 2.0
-        iterations = int(max_iter)
-        final_err  = abs(safe_eval(f, root)) if safe_eval(f, root) is not None else 0.0
-    return root, iterations, final_err, results
-
-
-def newton_raphson_solve(f, df, x0, tol, max_iter):
-    """Newton-Raphson method."""
-    results = []
-    xi      = float(x0)
-    root = iterations = final_err = None
-    fxi0 = safe_eval(f, xi)
-    dfxi0 = safe_eval(df, xi)
-    results.append({"Iter": 0, "x_i": round(xi, 8), "Ea": "—",
-                    "f(x)": round(fxi0, 8) if fxi0 is not None else "—",
-                    "f'(x)": round(dfxi0, 8) if dfxi0 is not None else "—"})
-    for i in range(int(max_iter)):
-        fxi, dfxi = safe_eval(f, xi), safe_eval(df, xi)
-        if fxi is None or dfxi is None or dfxi == 0:
-            break
-        xi_new = xi - fxi / dfxi
-        ea     = abs((xi_new - xi) / xi_new) if xi_new != 0 else abs(xi_new - xi)
-        xi     = xi_new
-        fxi_n  = safe_eval(f, xi)
-        dfxi_n = safe_eval(df, xi)
-        results.append({
-            "Iter":  i + 1,
-            "x_i":   round(xi, 8),
-            "Ea":    round(ea, 8),
-            "f(x)":  round(fxi_n, 8) if fxi_n is not None else "—",
-            "f'(x)": round(dfxi_n, 8) if dfxi_n is not None else "—",
-        })
-        if ea < tol:
-            root, iterations, final_err = xi, i + 1, ea
-            break
-    if root is None:
-        root = xi
-        iterations = int(max_iter)
-        final_err  = abs(safe_eval(f, xi)) if safe_eval(f, xi) is not None else 0.0
-    return root, iterations, final_err, results
-
-
-def secant_solve(f, x_prev, x0, tol, max_iter):
-    """Secant method."""
+def solve_regula_falsi(f, a, b, tol, max_iter):
     results  = []
-    xi_prev, xi = float(x_prev), float(x0)
-    root = iterations = final_err = None
+    xr_old   = None
+    root     = None
+    final_err = 0.0
+
     for i in range(int(max_iter)):
-        fxi, fxi_prev = safe_eval(f, xi), safe_eval(f, xi_prev)
-        if fxi is None or fxi_prev is None or (fxi - fxi_prev) == 0:
+        fxl = f(a); fxu = f(b)
+        denom = fxl - fxu
+        if not np.isfinite(denom) or abs(denom) < 1e-15:
             break
-        xi_new = xi - (fxi * (xi - xi_prev)) / (fxi - fxi_prev)
-        ea     = abs((xi_new - xi) / xi_new) if xi_new != 0 else abs(xi_new - xi)
-        fxi_n  = safe_eval(f, xi_new)
+
+        xr  = (b * fxl - a * fxu) / denom
+        fxr = f(xr)
+
+        if not np.isfinite(xr) or not np.isfinite(fxr):
+            break
+
+        ea   = abs((xr - xr_old) / xr) if (xr_old is not None and xr != 0) else None
+        prod = fxl * fxr
+
         results.append({
             "Iter":      i + 1,
-            "x_{i-1}":  round(xi_prev, 8),
-            "x_i":       round(xi, 8),
-            "x_{i+1}":  round(xi_new, 8),
-            "Ea":        round(ea, 8),
-            "f(x_{i-1})": round(fxi_prev, 8),
-            "f(x_i)":    round(fxi, 8),
-            "f(x_{i+1})": round(fxi_n, 8) if fxi_n is not None else "—",
+            "x_L":       round(float(a),   8),
+            "x_U":       round(float(b),   8),
+            "x_R":       round(float(xr),  8),
+            "E_a":       round(float(ea),  8) if ea is not None else "",
+            "f(x_L)":    round(float(fxl), 8),
+            "f(x_U)":    round(float(fxu), 8),
+            "f(x_R)":    round(float(fxr), 8),
+            "f(xL)·f(xR)": "< 0" if prod < 0 else "> 0",
         })
-        xi_prev, xi = xi, xi_new
-        if ea < tol:
-            root, iterations, final_err = xi_new, i + 1, ea
+
+        if (ea is not None and ea < tol) or abs(fxr) < 1e-12:
+            root, final_err = xr, float(ea) if ea else 0.0
             break
-    if root is None:
-        root = xi
-        iterations = int(max_iter)
-        final_err  = abs(safe_eval(f, xi)) if safe_eval(f, xi) is not None else 0.0
-    return root, iterations, final_err, results
+
+        if prod < 0:
+            b = xr
+        else:
+            a = xr
+        xr_old = xr
+
+    if root is None and results:
+        root = results[-1]["x_R"]
+        final_err = results[-1]["E_a"] if results[-1]["E_a"] != "" else 0.0
+
+    return root, len(results), final_err, results
 
 
-def incremental_solve(f, xl, delta_x, tol, max_iter):
-    """Incremental Search method."""
+def solve_newton_raphson(f, df, x0, tol, max_iter):
+    results   = []
+    xi        = float(x0)
+    root      = None
+    final_err = 0.0
+
+    fxi = f(xi); dfxi = df(xi)
+    results.append({
+        "Iter":   0,
+        "x_i":    round(xi, 8),
+        "E_a":    "",
+        "f(x)":   round(float(fxi),  8) if np.isfinite(fxi)  else "NaN",
+        "f'(x)":  round(float(dfxi), 8) if np.isfinite(dfxi) else "NaN",
+    })
+
+    for i in range(int(max_iter)):
+        fxi  = f(xi)
+        dfxi = df(xi)
+
+        if not (np.isfinite(fxi) and np.isfinite(dfxi)):
+            break
+        if abs(dfxi) < 1e-14:
+            break
+
+        xi_new = xi - fxi / dfxi
+        if not np.isfinite(xi_new):
+            break
+
+        ea = abs((xi_new - xi) / xi_new) if xi_new != 0 else abs(xi_new - xi)
+
+        xi = xi_new
+        results.append({
+            "Iter":   i + 1,
+            "x_i":    round(float(xi),  8),
+            "E_a":    round(float(ea),  8),
+            "f(x)":   round(float(f(xi)),  8) if np.isfinite(f(xi))  else "NaN",
+            "f'(x)":  round(float(df(xi)), 8) if np.isfinite(df(xi)) else "NaN",
+        })
+
+        if ea < tol:
+            root, final_err = xi, float(ea)
+            break
+
+    if root is None and len(results) > 1:
+        root = results[-1]["x_i"]
+        final_err = results[-1]["E_a"] if results[-1]["E_a"] != "" else 0.0
+
+    return root, max(0, len(results) - 1), final_err, results
+
+
+def solve_secant(f, x_prev, x0, tol, max_iter):
+    results   = []
+    xi_prev   = float(x_prev)
+    xi        = float(x0)
+    root      = None
+    final_err = 0.0
+
+    for i in range(int(max_iter)):
+        fxi      = f(xi)
+        fxi_prev = f(xi_prev)
+
+        if not (np.isfinite(fxi) and np.isfinite(fxi_prev)):
+            break
+        denom = fxi - fxi_prev
+        if abs(denom) < 1e-14:
+            break
+
+        xi_new = xi - (fxi * (xi - xi_prev)) / denom
+        if not np.isfinite(xi_new):
+            break
+
+        ea = abs((xi_new - xi) / xi_new) if xi_new != 0 else abs(xi_new - xi)
+
+        results.append({
+            "Iter":        i + 1,
+            "x_{i-1}":    round(float(xi_prev), 8),
+            "x_i":        round(float(xi),      8),
+            "x_{i+1}":   round(float(xi_new),  8),
+            "E_a":        round(float(ea),      8),
+            "f(x_{i-1})": round(float(fxi_prev), 8),
+            "f(x_i)":     round(float(fxi),      8),
+            "f(x_{i+1})": round(float(f(xi_new)),8) if np.isfinite(f(xi_new)) else "NaN",
+        })
+
+        xi_prev, xi = xi, xi_new
+
+        if ea < tol:
+            root, final_err = xi_new, float(ea)
+            break
+
+    if root is None and results:
+        root = results[-1]["x_{i+1}"]
+        final_err = results[-1]["E_a"] if results[-1]["E_a"] != "" else 0.0
+
+    return root, len(results), final_err, results
+
+
+def solve_incremental(f, xl, delta_x, tol, max_iter):
+    """Incremental search: returns all found brackets + detailed table."""
     results  = []
     curr_xl  = float(xl)
     curr_dx  = float(delta_x)
-    root = iterations = None
+    root     = None
     final_err = 0.0
+
     for i in range(int(max_iter)):
         curr_xu = curr_xl + curr_dx
-        fxl     = safe_eval(f, curr_xl)
-        fxu     = safe_eval(f, curr_xu)
-        if fxl is None or fxu is None:
+        fxl = f(curr_xl); fxu = f(curr_xu)
+
+        if not (np.isfinite(fxl) and np.isfinite(fxu)):
             curr_xl = curr_xu
             continue
-        prod = fxl * fxu
-        remark = "Next interval" if prod > 0 else "Root bracketed — reduce Δx"
+
+        prod  = fxl * fxu
+        remark = "Go to next interval" if prod > 0 else "Root bracketed — reduce interval"
+
         results.append({
-            "Iter":  i + 1,
-            "x_l":   round(curr_xl, 8),
-            "Δx":    round(curr_dx, 8),
-            "x_u":   round(curr_xu, 8),
-            "f(x_l)":round(fxl, 8),
-            "f(x_u)":round(fxu, 8),
-            "Sign":  "> 0" if prod > 0 else "< 0",
-            "Remark":remark,
+            "Iter":          i + 1,
+            "x_l":           round(float(curr_xl),  8),
+            "Δx":            round(float(curr_dx),  8),
+            "x_u":           round(float(curr_xu),  8),
+            "f(x_l)":        round(float(fxl),      8),
+            "f(x_u)":        round(float(fxu),      8),
+            "f(xl)·f(xu)":   "> 0" if prod > 0 else "< 0",
+            "Remark":        remark,
         })
-        if abs(fxu) < tol or curr_dx < (tol / 10):
-            root, iterations, final_err = curr_xu, i + 1, abs(fxu)
+
+        if abs(fxu) < tol or curr_dx < tol / 100:
+            root, final_err = curr_xu, abs(fxu)
             break
+
         if prod > 0:
             curr_xl = curr_xu
         else:
             curr_dx /= 10.0
-    if root is None:
-        root = curr_xl
-        iterations = int(max_iter)
-    return root, iterations, final_err, results
+
+    if root is None and results:
+        root = results[-1]["x_u"]
+        final_err = abs(f(root)) if np.isfinite(f(root)) else 0.0
+
+    return root, len(results), final_err, results
 
 
-def run_selected_method(method, f, df, params, tol, max_iter):
-    """Dispatch to the correct solver."""
-    if method == "Bisection Method":
-        return bisection_solve(f, params['xl'], params['xu'], tol, max_iter)
-    elif method == "Regula-Falsi":
-        return regula_falsi_solve(f, params['xl'], params['xu'], tol, max_iter)
-    elif method == "Newton-Raphson":
-        return newton_raphson_solve(f, df, params['x0'], tol, max_iter)
-    elif method == "Secant Method":
-        return secant_solve(f, params['x_prev'], params['x0'], tol, max_iter)
-    elif method == "Incremental Search":
-        return incremental_solve(f, params['xl'], params['delta_x'], tol, max_iter)
-    return None, 0, 0, []
+# ══════════════════════════════════════════════════════════════════════════════
+#  MULTI-ROOT SOLVER — orchestrates scanning + per-bracket method calls
+# ══════════════════════════════════════════════════════════════════════════════
+
+def solve_all_roots(f, df, method, x_start, x_end, scan_step,
+                    tol, max_iter,
+                    x0=None, x_prev=None, xl_single=None, xu_single=None,
+                    delta_x=0.5):
+    """
+    1. Scan [x_start, x_end] for sign-change brackets.
+    2. Apply chosen method to each bracket.
+    3. Return list of (root, iters, error, table) tuples.
+    """
+    brackets = scan_for_brackets(f, x_start, x_end, step=scan_step)
+
+    all_root_data = []
+
+    for (a, b) in brackets:
+        try:
+            if method == "Bisection Method":
+                root, iters, err, tbl = solve_bisection(f, a, b, tol, max_iter)
+            elif method == "Regula-Falsi":
+                root, iters, err, tbl = solve_regula_falsi(f, a, b, tol, max_iter)
+            elif method == "Newton-Raphson":
+                midpoint = (a + b) / 2.0
+                root, iters, err, tbl = solve_newton_raphson(f, df, midpoint, tol, max_iter)
+            elif method == "Secant Method":
+                root, iters, err, tbl = solve_secant(f, a, b, tol, max_iter)
+            elif method == "Incremental Search":
+                root, iters, err, tbl = solve_incremental(f, a, delta_x, tol, max_iter)
+            else:
+                continue
+
+            if root is not None and np.isfinite(root):
+                fval = f(root)
+                if np.isfinite(fval) and abs(fval) < max(tol * 100, 1e-4):
+                    all_root_data.append({
+                        "root": float(root),
+                        "iters": iters,
+                        "error": err,
+                        "table": tbl,
+                        "bracket": (a, b),
+                        "fval": float(fval),
+                    })
+        except Exception:
+            continue
+
+    # Deduplicate
+    deduped = []
+    seen = []
+    for rd in all_root_data:
+        is_dup = any(abs(rd["root"] - s) < max(tol * 10, 1e-5) for s in seen)
+        if not is_dup:
+            deduped.append(rd)
+            seen.append(rd["root"])
+
+    return sorted(deduped, key=lambda r: r["root"])
 
 
-def build_graph(f, roots_real, roots_complex, eq_str, x_min, x_max):
-    """Build a Plotly figure with the function curve and all roots marked."""
-    margin      = (x_max - x_min) * 0.1
-    x_plot_min  = x_min - margin
-    x_plot_max  = x_max + margin
+# ══════════════════════════════════════════════════════════════════════════════
+#  GRAPH BUILDER — auto-scale, all roots, domain-aware
+# ══════════════════════════════════════════════════════════════════════════════
 
-    xs = np.linspace(x_plot_min, x_plot_max, 800)
-    ys = []
-    for xv in xs:
-        yv = safe_eval(f, xv)
-        ys.append(yv if yv is not None else np.nan)
-    ys = np.array(ys, dtype=float)
+VINTAGE_COLORS = [
+    '#8B1A1A', '#1A5C8B', '#2E7D32', '#6B3A6B',
+    '#B8600A', '#2C5C5C', '#7A4F2E', '#1E5C1E',
+]
+
+def build_graph(f, eq_str, roots_data, x_start, x_end):
+    """Build full vintage-themed Plotly figure showing entire function + all roots."""
+    # Dense x grid for smooth rendering
+    N = 1000
+    raw_x = np.linspace(x_start, x_end, N)
+    raw_y = np.array([f(xi) for xi in raw_x], dtype=float)
+
+    # Clip extreme values for display (don't let asymptotes dominate)
+    valid_y = raw_y[np.isfinite(raw_y)]
+    if len(valid_y) == 0:
+        st.warning("No finite values found in the scanning interval.")
+        return None
+
+    y_med  = np.nanmedian(valid_y)
+    y_std  = np.nanstd(valid_y)
+    y_clip = max(abs(y_med) + 5 * y_std, 20.0)
+    display_y = np.where(np.isfinite(raw_y), np.clip(raw_y, -y_clip, y_clip), np.nan)
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=xs, y=ys, mode='lines', name='f(x)',
-        line=dict(color='#5C3317', width=2.5)
-    ))
-    fig.add_hline(y=0, line_dash="dash", line_color="#9B7245", line_width=1.3)
-    fig.add_vline(x=0, line_dash="dash", line_color="#9B7245", line_width=1.3)
 
-    # Mark real roots
-    for i, r in enumerate(roots_real):
-        yr = safe_eval(f, r)
+    # Split into segments at NaN gaps for proper discontinuity rendering
+    segs_x, segs_y = [], []
+    sx, sy = [], []
+    for xi, yi in zip(raw_x, display_y):
+        if np.isnan(yi):
+            if sx:
+                segs_x.append(sx); segs_y.append(sy)
+                sx, sy = [], []
+        else:
+            sx.append(xi); sy.append(yi)
+    if sx:
+        segs_x.append(sx); segs_y.append(sy)
+
+    first_trace = True
+    for sx, sy in segs_x:
         fig.add_trace(go.Scatter(
-            x=[r], y=[yr if yr is not None else 0],
-            mode='markers+text',
-            name=f'Root {i+1}: x ≈ {r:.6f}',
-            marker=dict(color='#8B1A1A', size=13, symbol='circle',
-                        line=dict(color='#2C1A0E', width=2)),
-            text=[f'x≈{r:.4f}'], textposition="top center",
-            textfont=dict(family="Playfair Display,serif", size=10, color="#5C3317"),
+            x=sx, y=sy, mode='lines',
+            name='f(x)' if first_trace else None,
+            showlegend=first_trace,
+            line=dict(color='#5C3317', width=2.5),
+            hovertemplate='x=%{x:.5f}<br>f(x)=%{y:.5f}<extra></extra>',
         ))
+        first_trace = False
+
+    # Zero axes
+    fig.add_hline(y=0, line_dash="dash", line_color="#9B7245", line_width=1.2)
+    fig.add_vline(x=0, line_dash="dash", line_color="#9B7245", line_width=1.2)
+
+    # Root markers
+    for idx, rd in enumerate(roots_data):
+        r = rd["root"]
+        color = VINTAGE_COLORS[idx % len(VINTAGE_COLORS)]
+        fig.add_trace(go.Scatter(
+            x=[r], y=[0],
+            mode='markers+text',
+            name=f'Root {idx+1}: x≈{r:.5f}',
+            marker=dict(color=color, size=13, symbol='circle',
+                        line=dict(color='#2C1A0E', width=2)),
+            text=[f' x≈{r:.4f}'],
+            textposition='top right',
+            textfont=dict(family='Playfair Display, serif', size=11, color=color),
+            hovertemplate=f'Root {idx+1}<br>x = {r:.8f}<br>f(x) ≈ {rd["fval"]:.2e}<extra></extra>',
+        ))
+
+    # Auto y-range: show roots + some function context
+    visible_ys = [yi for yi in display_y if np.isfinite(yi)]
+    y_lo = min(visible_ys) * 1.1 if visible_ys else -10
+    y_hi = max(visible_ys) * 1.1 if visible_ys else 10
 
     fig.update_layout(
         title=dict(
             text=f"f(x) = {eq_str}",
-            font=dict(family="Playfair Display,serif", size=14, color="#2C1A0E")
+            font=dict(family="Playfair Display,serif", size=14, color="#2C1A0E"),
         ),
         xaxis_title="x", yaxis_title="f(x)",
         hovermode="x unified",
         plot_bgcolor='#FBF4E6', paper_bgcolor='#FBF4E6',
         font=dict(family="Crimson Text,serif", color="#2C1A0E"),
-        xaxis=dict(gridcolor='#E2CFA8', linecolor='#C4A882',
-                   zerolinecolor='#C4A882', tickfont=dict(family="Crimson Text,serif")),
-        yaxis=dict(gridcolor='#E2CFA8', linecolor='#C4A882',
-                   zerolinecolor='#C4A882', tickfont=dict(family="Crimson Text,serif"),
-                   range=[max(-50, np.nanmin(ys)-1), min(50, np.nanmax(ys)+1)]),
-        legend=dict(bgcolor='#EDE0C4', bordercolor='#C4A882', borderwidth=1,
-                    font=dict(family="Crimson Text,serif")),
-        margin=dict(l=8, r=8, t=42, b=8),
-        height=340,
+        xaxis=dict(
+            gridcolor='#E2CFA8', linecolor='#C4A882',
+            zerolinecolor='#C4A882',
+            tickfont=dict(family="Crimson Text,serif"),
+            range=[x_start, x_end],
+        ),
+        yaxis=dict(
+            gridcolor='#E2CFA8', linecolor='#C4A882',
+            zerolinecolor='#C4A882',
+            tickfont=dict(family="Crimson Text,serif"),
+            range=[y_lo, y_hi],
+        ),
+        legend=dict(
+            bgcolor='#EDE0C4', bordercolor='#C4A882', borderwidth=1,
+            font=dict(family="Crimson Text,serif"),
+            orientation='v', x=1.01, xanchor='left',
+        ),
+        margin=dict(l=8, r=10, t=45, b=8),
+        height=370,
     )
+
     return fig
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  SIDEBAR — SAVE HISTORY PANEL
+#  SIDEBAR — CALCULATION HISTORY
 # ══════════════════════════════════════════════════════════════════════════════
 with st.sidebar:
     st.markdown("""
@@ -808,9 +996,12 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
     if st.session_state.history:
-        if st.button("🗑  Clear History"):
-            st.session_state.history = []
-            st.rerun()
+        clear_col, _ = st.columns([1, 0.01])
+        with clear_col:
+            if st.button("🗑  Clear History"):
+                st.session_state.history = []
+                st.rerun()
+
         st.markdown("<div style='margin-top:0.5rem;'>", unsafe_allow_html=True)
         for entry in reversed(st.session_state.history):
             st.markdown(f"""
@@ -861,26 +1052,20 @@ st.markdown('</div>', unsafe_allow_html=True)
 # ══════════════════════════════════════════════════════════════════════════════
 if app_mode == "Root Finding Analysis":
     st.markdown('<div class="stitle">🔍 Root Finding Analysis</div>', unsafe_allow_html=True)
-    st.markdown('<div class="ssub">Solve polynomial, transcendental, ln, exponential, and binomial equations — detecting ALL real and complex roots.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="ssub">Automatically scan the full interval, detect all real roots, and solve using your chosen numerical method.</div>', unsafe_allow_html=True)
 
     col_input, col_results = st.columns([1, 2.5])
 
-    # ── LEFT — PARAMETERS ──────────────────────────────────────────────────
     with col_input:
         st.markdown('<div class="panel">', unsafe_allow_html=True)
         st.markdown('<div class="panel-title">⚙ Parameters</div>', unsafe_allow_html=True)
 
         eq_str = st.text_input(
-            "Equation  f(x) = 0",
-            value="x**3 - 6*x**2 + 11*x - 6",
+            "Equation  f(x)",
+            value="3*x + sin(x) - exp(x)",
             help=(
-                "Examples:\n"
-                "  ln(x) - 2  →  log(x) - 2\n"
-                "  e^x - 5*x  →  exp(x) - 5*x\n"
-                "  x**4 - 5*x**2 + 4\n"
-                "  x**2 - 9\n"
-                "  3*x + sin(x) - exp(x)\n"
-                "Use ** for powers, * for multiplication."
+                "Supports: ln(x), log(x), exp(x), e^x, sin/cos/tan, polynomials, "
+                "binomials like (x+2)(x-4), mixed equations. Use ^ or ** for powers."
             )
         )
 
@@ -890,247 +1075,193 @@ if app_mode == "Root Finding Analysis":
             "Newton-Raphson",
             "Secant Method",
             "Incremental Search",
-            "All Methods (Compare)",
         ])
 
-        st.markdown("<hr style='margin:0.5rem 0'>", unsafe_allow_html=True)
-        st.markdown("**Search Range**")
-        c1, c2 = st.columns(2)
-        scan_min = c1.number_input("x min", value=-10.0, format="%.2f")
-        scan_max = c2.number_input("x max", value=10.0,  format="%.2f")
+        st.markdown("<hr>", unsafe_allow_html=True)
+        st.markdown("**🔭 Automatic Interval Scanning**", unsafe_allow_html=False)
 
-        st.markdown("<hr style='margin:0.5rem 0'>", unsafe_allow_html=True)
-        st.markdown("**Method-Specific Parameters**")
+        sc1, sc2 = st.columns(2)
+        x_start = sc1.number_input("Scan Start", value=-10.0, format="%.2f")
+        x_end   = sc2.number_input("Scan End",   value=10.0,  format="%.2f")
+        scan_step = st.number_input(
+            "Scan Step Size",
+            value=0.5, min_value=0.001, max_value=10.0, format="%.4f",
+            help="Smaller step = more roots detected but slower. 0.1–0.5 recommended."
+        )
 
-        params = {}
-        if method in ["Bisection Method", "Regula-Falsi"]:
-            st.info("Bracket [xl, xu] will be auto-detected per root from sign changes in the search range.")
+        st.markdown("<hr>", unsafe_allow_html=True)
+        st.markdown("**Method Parameters**")
+
+        if method == "Incremental Search":
+            xl_in = st.number_input("Initial Value (xl)", value=float(x_start), format="%.4f")
+            delta_x_in = st.number_input("Initial Δx", value=0.5, format="%.4f")
+        elif method in ["Bisection Method", "Regula-Falsi"]:
+            xl_in = st.number_input("Override Lower Bound (optional)", value=float(x_start), format="%.4f",
+                                    help="Used only if no brackets are auto-detected. Otherwise auto-brackets are used.")
+            xu_in = st.number_input("Override Upper Bound (optional)", value=float(x_end), format="%.4f")
         elif method == "Newton-Raphson":
-            params['x0'] = st.number_input("Initial Guess (xi)", value=1.0, format="%.4f")
+            x0_in = st.number_input(
+                "Initial Guess (used per-bracket midpoint by default)", value=1.0, format="%.4f",
+                help="The solver uses bracket midpoints automatically for multi-root detection."
+            )
         elif method == "Secant Method":
-            params['x_prev'] = st.number_input("First Guess (x_{i-1})", value=0.5, format="%.4f")
-            params['x0']     = st.number_input("Second Guess (x_i)",    value=1.5, format="%.4f")
-        elif method == "Incremental Search":
-            params['xl']      = st.number_input("Start x", value=float(scan_min), format="%.4f")
-            params['delta_x'] = st.number_input("Initial Δx", value=0.5, format="%.4f")
-        # All Methods uses auto-params
+            x_prev_in = st.number_input("First Guess Override", value=float(x_start), format="%.4f")
+            x0_in     = st.number_input("Second Guess Override", value=float(x_end),  format="%.4f")
 
-        st.markdown("<hr style='margin:0.5rem 0'>", unsafe_allow_html=True)
-        tol      = st.number_input("Tolerance (Ea)", value=0.0001, format="%.6f")
-        max_iter = st.number_input("Max Iterations", value=100, step=1)
-        decimals = st.slider("Display Decimal Places", 4, 12, 8)
+        tol      = st.number_input("Tolerance", value=0.0001, format="%.6f", min_value=1e-10)
+        max_iter = st.number_input("Max Iterations", value=100, step=1, min_value=5, max_value=5000)
 
-        solve_btn = st.button("✦  Calculate All Roots")
+        solve_btn = st.button("🔍  Calculate All Roots")
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Quick-reference examples
-        st.markdown('<div class="panel-dark">', unsafe_allow_html=True)
-        st.markdown('<div class="panel-title">📋 Equation Examples</div>', unsafe_allow_html=True)
-        examples = [
-            ("Polynomial (3 roots)", "x**3 - 6*x**2 + 11*x - 6"),
-            ("Polynomial (4 roots)", "x**4 - 5*x**2 + 4"),
-            ("Exponential",          "exp(x) - 5*x"),
-            ("Logarithmic",          "log(x) - 2"),
-            ("Transcendental",       "3*x + sin(x) - exp(x)"),
-            ("Binomial squared",     "x**2 - 9"),
-            ("Mixed",                "x**2 - 4*sin(x)"),
-        ]
-        for label, ex in examples:
-            st.markdown(f'<span style="font-family:Cormorant Garamond,serif;color:#6B4226;font-size:0.83rem;">'
-                        f'<b style="color:#5C3317">{label}:</b> <code style="background:#EDE0C4;padding:1px 5px;'
-                        f'border-radius:4px;font-size:0.8rem;">{ex}</code></span>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-
-    # ── RIGHT — RESULTS ────────────────────────────────────────────────────
+    # ─── RESULTS COLUMN ───────────────────────────────────────────────────────
     with col_results:
+
         if solve_btn:
             try:
-                t_start = time.time()
-                expr, f_func, df_func, dexpr = parse_equation(eq_str)
+                expr, f, df = parse_equation(eq_str)
 
-                # ── STEP 1: Find all roots via SymPy ──
-                sympy_roots = find_sympy_roots(expr)
-                real_roots_sym   = []
-                complex_roots_sym = []
-                for r in sympy_roots:
-                    try:
-                        rc = complex(r.evalf())
-                        if abs(rc.imag) < 1e-8:
-                            real_roots_sym.append(float(rc.real))
-                        else:
-                            complex_roots_sym.append(rc)
-                    except Exception:
-                        pass
+                # Build kwargs for specific methods
+                kwargs = dict(
+                    delta_x=delta_x_in if method == "Incremental Search" else 0.5,
+                )
 
-                # ── STEP 2: Numerical scan for sign changes (catch roots SymPy may miss) ──
-                brackets = find_sign_changes(f_func, scan_min, scan_max, n_points=3000)
+                with st.spinner("Scanning interval and solving..."):
+                    roots_data = solve_all_roots(
+                        f, df, method,
+                        x_start=float(x_start),
+                        x_end=float(x_end),
+                        scan_step=float(scan_step),
+                        tol=float(tol),
+                        max_iter=int(max_iter),
+                        **kwargs,
+                    )
 
-                # ── STEP 3: Refine brackets via bisection to get good numeric roots ──
-                numerical_roots = []
-                for (a, b) in brackets:
-                    r_num, _, _, _ = bisection_solve(f_func, a, b, 1e-10, 200)
-                    if r_num is not None:
-                        # De-duplicate
-                        if not any(abs(r_num - rr) < 1e-6 for rr in numerical_roots):
-                            numerical_roots.append(r_num)
+                # If no roots via scan, fall back to direct user bounds
+                if not roots_data:
+                    if method in ["Bisection Method", "Regula-Falsi"]:
+                        fa, fb = f(xl_in), f(xu_in)
+                        if np.isfinite(fa) and np.isfinite(fb) and fa * fb < 0:
+                            if method == "Bisection Method":
+                                root, iters, err, tbl = solve_bisection(f, xl_in, xu_in, tol, max_iter)
+                            else:
+                                root, iters, err, tbl = solve_regula_falsi(f, xl_in, xu_in, tol, max_iter)
+                            if root is not None:
+                                roots_data = [{"root": root, "iters": iters, "error": err,
+                                               "table": tbl, "bracket": (xl_in, xu_in),
+                                               "fval": float(f(root))}]
+                    elif method == "Newton-Raphson":
+                        root, iters, err, tbl = solve_newton_raphson(f, df, x0_in, tol, max_iter)
+                        if root is not None:
+                            roots_data = [{"root": root, "iters": iters, "error": err,
+                                           "table": tbl, "bracket": (x0_in, x0_in),
+                                           "fval": float(f(root))}]
+                    elif method == "Secant Method":
+                        root, iters, err, tbl = solve_secant(f, x_prev_in, x0_in, tol, max_iter)
+                        if root is not None:
+                            roots_data = [{"root": root, "iters": iters, "error": err,
+                                           "table": tbl, "bracket": (x_prev_in, x0_in),
+                                           "fval": float(f(root))}]
 
-                # Merge symbolic + numerical real roots (de-duplicated)
-                all_real_roots = list(numerical_roots)
-                for rs in real_roots_sym:
-                    if scan_min <= rs <= scan_max:
-                        if not any(abs(rs - rr) < 1e-6 for rr in all_real_roots):
-                            all_real_roots.append(rs)
-                all_real_roots.sort()
+                # Build graph
+                fig = build_graph(f, eq_str, roots_data, float(x_start), float(x_end))
 
-                t_end   = time.time()
-                exec_ms = (t_end - t_start) * 1000
+                # Summary table
+                summary = []
+                for idx, rd in enumerate(roots_data):
+                    summary.append({
+                        "Root #":          idx + 1,
+                        "Approx. Root":    round(rd["root"],  8),
+                        "f(root)":         f"{rd['fval']:.3e}",
+                        "Error (E_a)":     f"{rd['error']:.3e}" if rd["error"] else "—",
+                        "Method":          method,
+                        "Iterations":      rd["iters"],
+                    })
 
                 # Persist
-                st.session_state.rf_roots     = all_real_roots
-                st.session_state.rf_eq        = eq_str
-                st.session_state.rf_method    = method
-                st.session_state.rf_exec_time = exec_ms
-                st.session_state.rf_fig       = build_graph(
-                    f_func, all_real_roots, complex_roots_sym, eq_str, scan_min, scan_max)
+                primary_root = roots_data[0]["root"] if roots_data else None
+                primary_err  = roots_data[0]["error"] if roots_data else 0.0
+                primary_iters = roots_data[0]["iters"] if roots_data else 0
 
-                # ── STEP 4: Run chosen method on each bracket ──
-                all_iter_results = []
-
-                if method == "All Methods (Compare)":
-                    compare_rows = []
-                    methods_to_run = ["Bisection Method", "Regula-Falsi", "Newton-Raphson", "Secant Method"]
-                    for m in methods_to_run:
-                        for i, root in enumerate(all_real_roots):
-                            bracket = brackets[i] if i < len(brackets) else (root - 0.5, root + 0.5)
-                            p = {'xl': bracket[0], 'xu': bracket[1],
-                                 'x0': root, 'x_prev': root - 0.5}
-                            r, iters, err, tbl = run_selected_method(m, f_func, df_func, p, tol, max_iter)
-                            compare_rows.append({
-                                "Method":       m,
-                                "Root #":       i + 1,
-                                "Root Value":   round(float(r), decimals),
-                                "Iterations":   iters,
-                                "Final Ea":     f"{err:.2e}" if err else "—",
-                                "f(root)":      round(safe_eval(f_func, r) or 0, 8),
-                                "Converged":    "✅" if err < tol else "⚠️",
-                            })
-                    st.session_state.rf_all_results = compare_rows
-                    st.session_state.rf_results     = []
-                else:
-                    st.session_state.rf_all_results = []
-                    iteration_tables = []
-                    for i, root in enumerate(all_real_roots):
-                        bracket = brackets[i] if i < len(brackets) else (root - 0.5, root + 0.5)
-                        p = {'xl': bracket[0], 'xu': bracket[1],
-                             'x0': root, 'x_prev': root - 0.5,
-                             'delta_x': 0.5}
-                        r, iters, err, tbl = run_selected_method(
-                            method, f_func, df_func, p, tol, max_iter)
-                        iteration_tables.append({'root_idx': i+1, 'root': r, 'iters': iters,
-                                                 'err': err, 'table': tbl})
-                    st.session_state.rf_results = iteration_tables
+                st.session_state.rf_results    = roots_data[0]["table"] if roots_data else []
+                st.session_state.rf_root       = primary_root
+                st.session_state.rf_all_roots  = roots_data
+                st.session_state.rf_iterations = primary_iters
+                st.session_state.rf_error      = primary_err
+                st.session_state.rf_fig        = fig
+                st.session_state.rf_eq         = eq_str
+                st.session_state.rf_method     = method
+                st.session_state.rf_summary    = summary
 
                 # History
-                roots_str = ", ".join(f"x≈{r:.6f}" for r in all_real_roots[:4])
-                if len(all_real_roots) > 4:
-                    roots_str += f" (+{len(all_real_roots)-4} more)"
+                roots_str = ", ".join([f"x≈{rd['root']:.5f}" for rd in roots_data]) if roots_data else "None found"
                 st.session_state.history.append({
                     "type":      "Root Finding",
                     "method":    method,
                     "equation":  f"f(x) = {eq_str}",
-                    "answer":    roots_str or "No real roots",
+                    "answer":    roots_str,
                     "timestamp": datetime.now().strftime("%b %d, %Y  %H:%M:%S"),
                 })
-                st.toast("Calculation complete!", icon="✅")
+
+                if roots_data:
+                    st.toast(f"✅  {len(roots_data)} root(s) found!", icon="✅")
+                else:
+                    st.toast("⚠️  No roots detected in the interval.", icon="⚠️")
 
             except Exception as e:
-                st.error(f"Error parsing or solving equation: {e}")
+                st.error(f"**Parse / Solve Error:** {e}\n\nTip: Check your equation syntax. Use `*` for multiplication, `**` or `^` for powers, `ln(x)`, `exp(x)`, `sin(x)` etc.")
 
-        # ── DISPLAY PERSISTED RESULTS ──
-        if st.session_state.rf_eq:
-            eq_disp = st.session_state.rf_eq
-            all_real = st.session_state.rf_roots
+        # ── DISPLAY PERSISTED RESULTS ──────────────────────────────────────────
+        if st.session_state.rf_root is not None:
+            all_roots = st.session_state.rf_all_roots
 
-            # ─ TOP METRICS ─
-            n_real = len(all_real)
+            # METRICS ROW
             m1, m2, m3, m4 = st.columns(4)
-            m1.metric("Real Roots Found", n_real)
-            m2.metric("Method", st.session_state.rf_method[:18])
-            m3.metric("Search Range", f"[{scan_min:.1f}, {scan_max:.1f}]")
-            m4.metric("Exec Time", f"{st.session_state.rf_exec_time:.1f} ms")
+            m1.metric("Primary Root",     f"{st.session_state.rf_root:.8f}")
+            m2.metric("Roots Found",      len(all_roots))
+            m3.metric("Iterations (1st)", st.session_state.rf_iterations)
+            m4.metric("Error (E_a)",
+                      f"{st.session_state.rf_error:.3e}" if st.session_state.rf_error else "—")
 
-            # ─ ALL ROOTS SUMMARY ─
-            st.markdown('<div class="roots-summary">', unsafe_allow_html=True)
-            st.markdown('<div class="roots-summary-title">✦ All Roots Found</div>', unsafe_allow_html=True)
-            if all_real:
-                badges = "".join(
-                    f'<span class="root-badge">x<sub>{i+1}</sub> ≈ {r:.{decimals}f}</span>'
-                    for i, r in enumerate(all_real)
-                )
-                st.markdown(badges, unsafe_allow_html=True)
-            else:
-                st.markdown('<span style="font-family:Cormorant Garamond,serif;color:#9B7245;font-style:italic;">'
-                            'No real roots found in the specified range.</span>', unsafe_allow_html=True)
-
-            # Roots summary table
-            if all_real:
-                root_rows = []
-                for i, r in enumerate(all_real):
-                    fv = safe_eval(st.session_state.rf_fig, r) if False else None
-                    root_rows.append({
-                        "Root #":       i + 1,
-                        "x Value":      round(r, decimals),
-                        "Type":         "Real",
-                        "Verified f(x)": "≈ 0 ✅",
-                    })
-                st.dataframe(pd.DataFrame(root_rows), use_container_width=True, height=180)
-            st.markdown('</div>', unsafe_allow_html=True)
-
-            # ─ GRAPH ─
-            st.markdown('<div class="panel">', unsafe_allow_html=True)
-            st.markdown('<div class="panel-title">📈 Function Graph — All Roots Marked</div>', unsafe_allow_html=True)
-            if st.session_state.rf_fig:
-                st.plotly_chart(st.session_state.rf_fig, use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-
-            # ─ COMPARISON TABLE (All Methods mode) ─
-            if st.session_state.rf_all_results:
+            # ROOT SUMMARY PANEL
+            if st.session_state.rf_summary:
                 st.markdown('<div class="panel">', unsafe_allow_html=True)
-                st.markdown('<div class="panel-title">⚖ Method Comparison Table</div>', unsafe_allow_html=True)
-                df_compare = pd.DataFrame(st.session_state.rf_all_results)
-                st.dataframe(df_compare, use_container_width=True, height=340)
+                st.markdown('<div class="panel-title">✦ Root Summary</div>', unsafe_allow_html=True)
+                df_summary = pd.DataFrame(st.session_state.rf_summary)
+                st.dataframe(df_summary, use_container_width=True, hide_index=True)
                 st.markdown('</div>', unsafe_allow_html=True)
 
-            # ─ PER-ROOT ITERATION TABLES ─
-            if st.session_state.rf_results:
-                for item in st.session_state.rf_results:
-                    with st.expander(
-                        f"📊 Root {item['root_idx']}  ·  x ≈ {item['root']:.{decimals}f}  "
-                        f"·  {item['iters']} iterations  ·  Ea = {item['err']:.2e}",
-                        expanded=(item['root_idx'] == 1)
-                    ):
-                        if item['table']:
-                            st.dataframe(pd.DataFrame(item['table']), use_container_width=True)
-                        else:
-                            st.info("No iteration data available for this root.")
+            # GRAPH
+            if st.session_state.rf_fig:
+                st.markdown('<div class="panel">', unsafe_allow_html=True)
+                st.markdown('<div class="panel-title">📈 Function Graph — All Roots</div>', unsafe_allow_html=True)
+                st.plotly_chart(st.session_state.rf_fig, use_container_width=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+
+            # ITERATION TABLES (one per root, collapsible)
+            st.markdown('<div class="panel">', unsafe_allow_html=True)
+            st.markdown('<div class="panel-title">📊 Iteration Tables</div>', unsafe_allow_html=True)
+            for idx, rd in enumerate(all_roots):
+                with st.expander(f"Root {idx+1}: x ≈ {rd['root']:.8f}   (bracket [{rd['bracket'][0]:.4f}, {rd['bracket'][1]:.4f}])", expanded=(idx == 0)):
+                    st.dataframe(pd.DataFrame(rd["table"]), use_container_width=True)
+            st.markdown('</div>', unsafe_allow_html=True)
 
         else:
             st.markdown("""
-                <div class="panel" style="min-height:560px;">
+                <div class="panel" style="min-height:520px;">
                     <div class="placeholder-box">
                         ✦ Configure the parameters on the left<br>
                         and press <em>Calculate All Roots</em> to begin.<br><br>
-                        The solver will automatically scan the equation,<br>
-                        detect all sign changes, and find every real root.<br><br>
-                        Supports: polynomial · logarithmic · exponential<br>
-                        trigonometric · mixed transcendental equations
+                        The solver will automatically scan the full interval,<br>
+                        detect every root, and display the iteration tables<br>
+                        and complete function graph here.
                     </div>
                 </div>
             """, unsafe_allow_html=True)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  MODULE 2 — ADVANCED MATRIX OPERATIONS (unchanged)
+#  MODULE 2 — ADVANCED MATRIX OPERATIONS (UNCHANGED)
 # ══════════════════════════════════════════════════════════════════════════════
 elif app_mode == "Advanced Matrix Operations":
     st.markdown('<div class="stitle">⊞ Advanced Matrix Operations</div>', unsafe_allow_html=True)
@@ -1154,8 +1285,7 @@ elif app_mode == "Advanced Matrix Operations":
         ca1, ca2 = st.columns(2)
         rows_A = ca1.number_input("Rows", 1, 10, 3, key="ra")
         cols_A = ca2.number_input("Cols", 1, 10, 3, key="ca")
-        df_A     = pd.DataFrame(np.zeros((rows_A, cols_A)),
-                                columns=[f"C{i+1}" for i in range(cols_A)])
+        df_A     = pd.DataFrame(np.zeros((rows_A, cols_A)), columns=[f"C{i+1}" for i in range(cols_A)])
         edited_A = st.data_editor(df_A, use_container_width=True, key="matrix_a")
         A        = edited_A.to_numpy()
 
@@ -1172,8 +1302,7 @@ elif app_mode == "Advanced Matrix Operations":
                 cb1, cb2 = st.columns(2)
                 rows_B = cb1.number_input("Rows", 1, 10, int(cols_A), key="rb", disabled=True)
                 cols_B = cb2.number_input("Cols", 1, 10, 3, key="cb")
-            df_B     = pd.DataFrame(np.zeros((rows_B, cols_B)),
-                                    columns=[f"C{i+1}" for i in range(cols_B)])
+            df_B     = pd.DataFrame(np.zeros((rows_B, cols_B)), columns=[f"C{i+1}" for i in range(cols_B)])
             edited_B = st.data_editor(df_B, use_container_width=True, key="matrix_b")
             B        = edited_B.to_numpy()
 
@@ -1190,21 +1319,22 @@ elif app_mode == "Advanced Matrix Operations":
         if exec_btn:
             try:
                 with st.spinner("Processing..."):
-                    time.sleep(0.3)
+                    time.sleep(0.35)
 
-                result   = None
-                det_val  = None
-                ans_str  = ""
+                result  = None
+                ans_str = ""
+                det_val = None
+
                 if op == "Addition":
-                    result  = A + B;         ans_str = "Matrix addition complete."
+                    result  = A + B;  ans_str = "Matrix addition complete."
                 elif op == "Multiplication":
-                    result  = np.matmul(A, B); ans_str = "Matrix product computed."
+                    result  = np.matmul(A, B);  ans_str = "Matrix product computed."
                 elif op == "Transpose":
-                    result  = A.T;            ans_str = "Matrix transposed."
+                    result  = A.T;  ans_str = "Matrix transposed."
                 elif op == "Determinant":
-                    det_val = np.linalg.det(A); ans_str = f"det(A) = {det_val:.6f}"
+                    det_val = np.linalg.det(A);  ans_str = f"det(A) = {det_val:.6f}"
                 elif op == "Inverse":
-                    result  = np.linalg.inv(A); ans_str = "Inverse computed."
+                    result  = np.linalg.inv(A);  ans_str = "Inverse computed."
                 elif op == "Adjoint":
                     result  = np.round(np.linalg.inv(A) * np.linalg.det(A), 6)
                     ans_str = "Adjoint computed."
@@ -1212,12 +1342,15 @@ elif app_mode == "Advanced Matrix Operations":
                     result  = np.linalg.matrix_power(A, int(power))
                     ans_str = f"A^{int(power)} computed."
                 elif op == "System of Equations (Ax = B)":
-                    result  = np.linalg.solve(A, B); ans_str = "System solved for X."
+                    result  = np.linalg.solve(A, B);  ans_str = "System solved for X."
 
                 st.session_state.mx_result = {
                     "op": op, "result": result,
-                    "det_val": det_val, "ans_str": ans_str
+                    "det_val": det_val,
+                    "ans_str": ans_str,
                 }
+                st.session_state.mx_op = op
+
                 st.session_state.history.append({
                     "type":      "Matrix Operation",
                     "method":    op,
@@ -1236,6 +1369,7 @@ elif app_mode == "Advanced Matrix Operations":
             r = st.session_state.mx_result
             st.markdown('<div class="panel">', unsafe_allow_html=True)
             st.markdown(f'<div class="panel-title">⊞ Result — {r["op"]}</div>', unsafe_allow_html=True)
+
             if r["op"] == "Determinant":
                 st.metric("Determinant Value", f'{r["det_val"]:.6f}')
             else:
@@ -1244,7 +1378,8 @@ elif app_mode == "Advanced Matrix Operations":
                 if r["result"] is not None:
                     st.dataframe(
                         pd.DataFrame(r["result"]).style.format("{:.6g}"),
-                        use_container_width=True, height=420,
+                        use_container_width=True,
+                        height=420,
                     )
             st.markdown('</div>', unsafe_allow_html=True)
         else:
