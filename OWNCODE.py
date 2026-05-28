@@ -856,18 +856,17 @@ if app_mode == "Root Finding Analysis":
             st.plotly_chart(st.session_state.rf_fig, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-            # Per-root expandable iteration tables
-            for idx, (ri, tbl) in enumerate(zip(all_roots, all_tables)):
-                ea_str = f"{ri['error']:.4e}" if isinstance(ri['error'], float) and ri['error'] else "—"
-                with st.expander(
-                    f"📊 Root {idx+1}  ·  x ≈ {ri['root']:.8f}  "
-                    f"·  {ri['iterations']} iterations  ·  Ea = {ea_str}",
-                    expanded=(idx == 0)
-                ):
-                    if tbl:
-                        st.dataframe(pd.DataFrame(tbl), use_container_width=True)
-                    else:
-                        st.info("No iteration data for this root.")
+            # Single merged iteration table
+            st.markdown('<div class="panel">', unsafe_allow_html=True)
+            st.markdown('<div class="panel-title">📊 Iteration Table</div>', unsafe_allow_html=True)
+            all_rows = []
+            for tbl in all_tables:
+                all_rows.extend(tbl)
+            if all_rows:
+                st.dataframe(pd.DataFrame(all_rows), use_container_width=True)
+            else:
+                st.info("No iteration data available.")
+            st.markdown('</div>', unsafe_allow_html=True)
 
         else:
             st.markdown("""
