@@ -850,25 +850,6 @@ if app_mode == "Root Finding Analysis":
             m2.metric("Primary Root",      f"{all_roots[0]['root']:.8f}")
             m3.metric("Method",            st.session_state.rf_method)
 
-            # All Roots Summary
-            st.markdown('<div class="roots-summary">', unsafe_allow_html=True)
-            st.markdown('<div class="roots-summary-title">✦ All Roots Found</div>', unsafe_allow_html=True)
-            badges = "".join(
-                f'<span class="root-badge">x<sub>{i+1}</sub> ≈ {ri["root"]:.8f}</span>'
-                for i, ri in enumerate(all_roots)
-            )
-            st.markdown(badges, unsafe_allow_html=True)
-            summary_rows = [{
-                "Root #":     i + 1,
-                "x Value":    round(ri["root"], 10),
-                "f(root)":    f"{ri['f_root']:.2e}",
-                "Iterations": ri["iterations"],
-                "Final Ea":   f"{ri['error']:.4e}" if isinstance(ri["error"], float) and ri["error"] else "—",
-                "Method":     ri["method"],
-            } for i, ri in enumerate(all_roots)]
-            st.dataframe(pd.DataFrame(summary_rows), use_container_width=True, height=180)
-            st.markdown('</div>', unsafe_allow_html=True)
-
             # Graph
             st.markdown('<div class="panel">', unsafe_allow_html=True)
             st.markdown('<div class="panel-title">📈 Full Function Graph — All Roots</div>', unsafe_allow_html=True)
