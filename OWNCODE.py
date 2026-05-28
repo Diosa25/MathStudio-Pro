@@ -1048,41 +1048,20 @@ if app_mode == "Root Finding Analysis":
             m2.metric("Primary Root",      f"{all_roots[0]['root']:.8f}")
             m3.metric("Method",            st.session_state.rf_method)
 
-            # ROOT SUMMARY TABLE
-            st.markdown('<div class="panel" style="margin-top:0.7rem;">', unsafe_allow_html=True)
-            st.markdown('<div class="panel-title">✦ Complete Root Summary</div>', unsafe_allow_html=True)
-            summary_rows = []
-            for idx, ri in enumerate(all_roots):
-                summary_rows.append({
-                    "Root #":            idx + 1,
-                    "Approximate Root":  f"{ri['root']:.10f}",
-                    "f(root)":           f"{ri['f_root']:.4e}",
-                    "Error (E_a)":       f"{ri['error']:.4e}" if ri['error'] else "—",
-                    "Method":            ri['method'],
-                    "Iterations":        ri['iterations'],
-                    "Bracket":           f"[{ri['bracket'][0]:.3f}, {ri['bracket'][1]:.3f}]"
-                })
-            st.dataframe(pd.DataFrame(summary_rows), use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-
             # GRAPH
-            st.markdown('<div class="panel">', unsafe_allow_html=True)
+            st.markdown('<div class="panel" style="margin-top:0.7rem;">', unsafe_allow_html=True)
             st.markdown('<div class="panel-title">📈 Full Function Graph — All Roots</div>', unsafe_allow_html=True)
             st.plotly_chart(st.session_state.rf_fig, use_container_width=True)
             st.markdown('</div>', unsafe_allow_html=True)
 
-            # ITERATION TABLES — one expander per root, EXACT original column headers
+            # SINGLE MERGED ITERATION TABLE — all rows from all roots combined
             st.markdown('<div class="panel">', unsafe_allow_html=True)
-            st.markdown('<div class="panel-title">📊 Detailed Iteration Tables</div>', unsafe_allow_html=True)
-            for idx, (ri, rows) in enumerate(zip(all_roots, all_tables)):
-                label = (f"Root {idx+1}  ·  x ≈ {ri['root']:.8f}"
-                         f"  ·  {ri['iterations']} iterations"
-                         f"  ·  Bracket [{ri['bracket'][0]:.3f}, {ri['bracket'][1]:.3f}]")
-                with st.expander(label, expanded=(idx == 0)):
-                    if rows:
-                        st.dataframe(pd.DataFrame(rows), use_container_width=True)
-                    else:
-                        st.info("No iteration rows recorded for this bracket.")
+            st.markdown('<div class="panel-title">📊 Iteration Table</div>', unsafe_allow_html=True)
+            all_rows = []
+            for tbl in all_tables:
+                all_rows.extend(tbl)
+            if all_rows:
+                st.dataframe(pd.DataFrame(all_rows), use_container_width=True, height=220)
             st.markdown('</div>', unsafe_allow_html=True)
 
         else:
